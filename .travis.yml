@@ -1,0 +1,41 @@
+language: cpp
+compiler:
+  - gcc
+env:
+  - RDM_QT_VERSION=55
+  - RDM_QT_VERSION=542
+before_install:
+- sudo add-apt-repository --yes ppa:beineri/opt-qt${RDM_QT_VERSION}
+- sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test 
+- gcc --version
+- sudo apt-get update -qq
+- sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 libssh2-1-dev -y -qq
+- sudo apt-get install gcc-4.9 g++-4.9 gdb -y -qq
+- sudo rm -f /usr/bin/gcov
+- sudo rm -f /usr/bin/gcc
+- sudo rm -f /usr/bin/g++
+- sudo ln -s /usr/bin/gcov-4.9 /usr/bin/gcov
+- sudo ln -s /usr/bin/gcc-4.9 /usr/bin/gcc
+- sudo ln -s /usr/bin/g++-4.9 /usr/bin/g++
+- source /opt/qt${RDM_QT_VERSION:0:2}/bin/qt${RDM_QT_VERSION:0:2}-env.sh
+- sudo pip install cpp-coveralls
+- qmake -v
+script: 
+  - cd ./tests/unit_tests
+  - qmake DEFINES+=INTEGRATION_TESTS
+  - make -s -j 2
+  - ./bin/tests -platform minimal -txt
+  - cd ./../../
+  - qmake
+  - make -s -j 2
+after_success:
+  - cd ./../tests
+  - coveralls -b `pwd`/unit_tests/ -r `readlink -m ./../` -e 3rdparty/ -e tests/ -E .+/moc_.* -E .+/qrc_.* -E .+/qxt.* -E .+/ui_.*  > coveralls.log
+services:
+  - redis-server
+notifications:
+  recipients:
+    - u.glide@gmail.com
+  email:
+    on_success: change
+    on_failure: change
