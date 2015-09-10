@@ -29,7 +29,7 @@ script:
   - qmake DESTDIR=`pwd`/build
   - make -s -j 2
 after_success:
-  - cd ./../tests/unit_tests
+  - cd ./tests/unit_tests
   - coveralls -b `pwd` -r `readlink -m ./../../` -e qredisclient/tests/ -e qredisclient/3rdparty/ -E .+/moc_.* -E .+/qrc_.* -E .+/qxt.* -E .+/ui_.*  > coveralls.log
 services:
   - redis-server
