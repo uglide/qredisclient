@@ -22,14 +22,14 @@ before_install:
 - qmake -v
 script: 
   - cd ./tests/unit_tests
-  - qmake DEFINES+=INTEGRATION_TESTS
+  - qmake DEFINES+=INTEGRATION_TESTS DESTDIR=`pwd`/bin
   - make -s -j 2
   - ./bin/tests -platform minimal -txt
   - cd ./../../
-  - qmake
+  - qmake DESTDIR=`pwd`/build
   - make -s -j 2
 after_success:
-  - cd ./../tests
+  - cd ./../tests/unit_tests
   - coveralls -b `pwd`/unit_tests/ -r `readlink -m ./../` -e 3rdparty/ -e tests/ -E .+/moc_.* -E .+/qrc_.* -E .+/qxt.* -E .+/ui_.*  > coveralls.log
 services:
   - redis-server
