@@ -4,7 +4,7 @@
 [![Build status](https://ci.appveyor.com/api/projects/status/2qtv3nsj16kkm621?svg=true)](https://ci.appveyor.com/project/uglide/qredisclient)
 [![Coverage Status](https://coveralls.io/repos/uglide/qredisclient/badge.svg?branch=master&service=github)](https://coveralls.io/github/uglide/qredisclient?branch=master)
 
-Asynchronous Qt-based Redis client with SSL and SSH tunnelling support.
+Asynchronous Qt-based Redis client with SSL and SSH tunnelling support. This client is developed for [RedisDesktopManager](https://github.com/uglide/RedisDesktopManager) by [Igor Malinovskiy](https://github.com/uglide)
 
 ```c++
 #include "qredisclient/redisclient.h"
