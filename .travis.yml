@@ -24,7 +24,7 @@ script:
   - cd ./tests/unit_tests
   - qmake DEFINES+=INTEGRATION_TESTS DESTDIR=`pwd`/bin
   - make -s -j 2
-  - ./bin/tests -platform minimal -txt
+  - ./bin/tests -txt
   - cd ./../../
   - qmake DESTDIR=`pwd`/build
   - make -s -j 2
