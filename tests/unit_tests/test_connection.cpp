@@ -222,6 +222,7 @@ void TestConnection::connectWithInvalidConfig()
 
 void TestConnection::testWithDummyTransporter()
 {
+    QSKIP("FIXME");
     //given            
     // connection with dummy transporter    
     QString validResponse("+PONG\r\n");
