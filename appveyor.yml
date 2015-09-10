@@ -1,0 +1,22 @@
+version: 0.0.{build}
+clone_depth: 5
+install:
+- appveyor DownloadFile "http://redisdesktop.com/builds/msys32.zip" -FileName "msys2.zip"
+- 7z x msys2.zip > NUL
+- git submodule update --init --recursive
+- set QTDIR=C:\Qt\5.5\mingw492_32
+- set PATH=%QTDIR%\bin;%cd%\msys32\mingw32\bin\;%cd%\msys32\usr\bin\;%PATH%
+- qmake -v
+- mingw32-make -v
+- g++ -v
+- nuget install redis-64 -excludeversion
+- redis-64\redis-server.exe --service-install
+- redis-64\redis-server.exe --service-start
+build_script:
+- qmake CONFIG+=release DESTDIR=%cd%/build
+- mingw32-make -s -j 2
+test_script:
+- cd tests/unit_tests
+- qmake DEFINES+=INTEGRATION_TESTS DESTDIR=%cd%/bin 
+- mingw32-make -s -j 2
+- '%cd%/bin/tests -txt'
