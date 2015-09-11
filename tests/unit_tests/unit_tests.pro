@@ -15,5 +15,12 @@ INCLUDEPATH += \
 
 DEFINES += INTEGRATION_TESTS
 
+unix:!mac {
+    #code coverage
+    QMAKE_CXXFLAGS += -g -fprofile-arcs -ftest-coverage -O0
+    QMAKE_LFLAGS += -g -fprofile-arcs -ftest-coverage  -O0
+    LIBS += -lgcov
+}
+
 include($$PWD/redisclient-tests.pri)
 include($$PROJECT_ROOT/3rdparty/3rdparty.pri)
