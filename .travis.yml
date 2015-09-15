@@ -24,15 +24,10 @@ before_install:
 - qmake -v
 script: 
   - cd ./tests/unit_tests
-  - qmake DEFINES+=INTEGRATION_TESTS DESTDIR=`pwd`/bin
+  - qmake DESTDIR=`pwd`/bin
   - make -s -j 2
   - ./bin/tests -txt
-  - cd ./../../
-  - qmake DESTDIR=`pwd`/build
-  - make -s -j 2
 after_success:
-  - cd ./tests/unit_tests
-  - ls -ahl
   - coveralls --verbose -r `readlink -m ./../../` -e 3rdparty/ -e tests/
 services:
   - redis-server
