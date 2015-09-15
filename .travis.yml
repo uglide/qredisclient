@@ -27,6 +27,7 @@ script:
   - cd ./tests/unit_tests
   - qmake DESTDIR=`pwd`/bin
   - make -s -j 2
+  - strings ./bin/tests
   - ./bin/tests -txt
 after_success:
   - coveralls --verbose -r `readlink -m ./../../` -e 3rdparty/ -e tests/
