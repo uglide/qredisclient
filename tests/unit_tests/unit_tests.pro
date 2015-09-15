@@ -24,3 +24,8 @@ unix:!mac {
 
 include($$PWD/redisclient-tests.pri)
 include($$PROJECT_ROOT/3rdparty/3rdparty.pri)
+
+UI_DIR = $$DESTDIR/ui
+OBJECTS_DIR = $$DESTDIR/obj
+MOC_DIR = $$DESTDIR/obj
+RCC_DIR = $$DESTDIR/obj
