@@ -30,7 +30,8 @@ script:
   - make -s -j 2
 after_success:
   - cd ./tests/unit_tests
-  - coveralls -b `pwd` -r `readlink -m ./../../` -e tests/ -e 3rdparty/ -E .+/moc_.* -E .+/qrc_.* -E .+/qxt.*
+  - ls -ahl
+  - coveralls --verbose -b `pwd` -r `readlink -m ./../../` -e tests/ -e 3rdparty/ -E .+/moc_.* -E .+/qrc_.* -E .+/qxt.*
 services:
   - redis-server
 notifications:
