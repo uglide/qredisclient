@@ -147,7 +147,7 @@ void TestConnection::subscribeAndUnsubscribe()
     connectionPublisher.commandSync("PUBLISH", "ch2", "MSG2");
     connectionPublisher.commandSync("PUBLISH", "ch3", "MSG3");
 
-    wait(3000);
+    wait(5000);
 
     //then
     QCOMPARE(4, messagesRecieved); // Subscribe resp + 3 messages from publisher
