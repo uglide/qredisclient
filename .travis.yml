@@ -30,7 +30,7 @@ script:
   - strings ./bin/tests
   - ./bin/tests -txt
 after_success:
-  - coveralls --verbose -r `readlink -m ./../../` -e 3rdparty/ -e tests/
+  - coveralls --verbose -r `readlink -m ./../../src` -e 3rdparty/ -e tests/
 services:
   - redis-server
 notifications:
