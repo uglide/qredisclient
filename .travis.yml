@@ -33,7 +33,7 @@ script:
 after_success:
   - cd ./tests/unit_tests
   - ls -ahl
-  - coveralls --verbose -r `readlink -m ./../../`
+  - coveralls --verbose -r `readlink -m ./../../` -e 3rdparty/ -e tests/
 services:
   - redis-server
 notifications:
