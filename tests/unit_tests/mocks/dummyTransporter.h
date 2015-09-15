@@ -85,5 +85,5 @@ protected:
     QByteArray readFromSocket() override { return QByteArray(); }
     void initSocket() override {}
     bool connectToHost() override { return true; }
-    void sendCommand(const QByteArray& cmd) override {}
+    void sendCommand(const QByteArray&) override {}
 };
