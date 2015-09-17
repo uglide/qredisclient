@@ -17,7 +17,7 @@ QSharedPointer<RedisClient::Connection> BaseTestCase::getRealConnectionWithDummy
     transporter->setFakeResponses(expectedResponses);
 
     connection->setTransporter(transporter.dynamicCast<RedisClient::AbstractTransporter>());
-
+    connection->connect();
     return connection;
 }
 
