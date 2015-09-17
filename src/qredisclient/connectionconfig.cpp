@@ -73,6 +73,11 @@ QList<QSslCertificate> RedisClient::ConnectionConfig::sslCaCertificates() const
     return QList<QSslCertificate>();
 }
 
+QString RedisClient::ConnectionConfig::sslCaCertPath() const
+{
+    return param<QString>("ssl_ca_cert_path");
+}
+
 QString RedisClient::ConnectionConfig::sslPrivateKeyPath() const
 {
     return getValidPathFromParameter("ssl_private_key_path");
@@ -115,7 +120,7 @@ uint RedisClient::ConnectionConfig::sshPort() const
     return param<uint>("ssh_port");
 }
 
-QVariantHash RedisClient::ConnectionConfig::getInternalParameters()
+QVariantHash RedisClient::ConnectionConfig::getInternalParameters() const
 {
     return m_parameters;
 }
@@ -174,6 +179,11 @@ QWeakPointer<RedisClient::Connection> RedisClient::ConnectionConfig::getOwner() 
 QString RedisClient::ConnectionConfig::getSshPrivateKey() const
 {
     return getValidPathFromParameter("ssh_private_key_path");
+}
+
+QString RedisClient::ConnectionConfig::getSshPrivateKeyPath() const
+{
+    return param<QString>("ssh_private_key_path");
 }
 
 RedisClient::ConnectionConfig RedisClient::ConnectionConfig::fromJsonObject(const QJsonObject &config)

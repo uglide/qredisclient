@@ -103,6 +103,12 @@ public:
      * Command execution API
      */
     /**
+     * @brief command
+     * @param cmd
+     */
+    void command(const Command& cmd);
+
+    /**
      * @brief Execute command without callback in async mode.
      * @param rawCmd
      * @param db
@@ -120,18 +126,27 @@ public:
                  RedisClient::Command::Callback callback, int db = -1);
 
     /**
+     * @brief commandSync
+     * @param cmd
+     * @return
+     */
+    Response commandSync(const Command& cmd);
+
+    /**
      * @brief Execute command without callback and wait for response.
      * @param rawCmd
      * @param db
      * @return
      */
-    Response commandSync(QList<QByteArray> rawCmd, int db = -1);
+    Response commandSync(QList<QByteArray> rawCmd, int db = -1);    
+
     /*
      * Aliases for ^ function
      */
     Response commandSync(QString cmd, int db = -1);
     Response commandSync(QString cmd, QString arg1, int db = -1);
     Response commandSync(QString cmd, QString arg1, QString arg2, int db = -1);
+    Response commandSync(QString cmd, QString arg1, QString arg2, QString arg3, int db = -1);
 
     /**
      * @brief CollectionCallback
@@ -173,12 +188,11 @@ protected:
     void createTransporter();
     bool isTransporterRunning();
 
+    Response internalCommandSync(QList<QByteArray> rawCmd);
+
     void processScanCommand(QSharedPointer<ScanCommand> cmd,
                             CollectionCallback callback,
                             QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>());
-
-    Response commandSync(QList<QByteArray> rawCmd,
-                         bool isHiPriorityCommand, int db = -1);
 
 protected slots:
     void connectionReady();

@@ -109,24 +109,31 @@ void RedisClient::Connection::command(QList<QByteArray> rawCmd, QObject *owner,
 
 RedisClient::Response RedisClient::Connection::commandSync(QList<QByteArray> rawCmd, int db)
 {
-    return commandSync(rawCmd, false, db);
+    Command cmd(rawCmd, db);
+    return commandSync(cmd);
 }
 
 RedisClient::Response RedisClient::Connection::commandSync(QString cmd, int db)
 {
-    QList<QByteArray> rawCmd{cmd.toLatin1()};
+    QList<QByteArray> rawCmd{cmd.toUtf8()};
     return commandSync(rawCmd, db);
 }
 
 RedisClient::Response RedisClient::Connection::commandSync(QString cmd, QString arg1, int db)
 {
-    QList<QByteArray> rawCmd{cmd.toLatin1(), arg1.toLatin1()};
+    QList<QByteArray> rawCmd{cmd.toUtf8(), arg1.toUtf8()};
     return commandSync(rawCmd, db);
 }
 
 RedisClient::Response RedisClient::Connection::commandSync(QString cmd, QString arg1, QString arg2, int db)
 {
-    QList<QByteArray> rawCmd{cmd.toLatin1(), arg1.toLatin1(), arg2.toLatin1()};
+    QList<QByteArray> rawCmd{cmd.toUtf8(), arg1.toUtf8(), arg2.toUtf8()};
+    return commandSync(rawCmd, db);
+}
+
+RedisClient::Response RedisClient::Connection::commandSync(QString cmd, QString arg1, QString arg2, QString arg3, int db)
+{
+    QList<QByteArray> rawCmd{cmd.toUtf8(), arg1.toUtf8(), arg2.toUtf8(), arg3.toUtf8()};
     return commandSync(rawCmd, db);
 }
 
@@ -227,6 +234,13 @@ bool RedisClient::Connection::isTransporterRunning()
             && m_transporterThread->isRunning();
 }
 
+RedisClient::Response RedisClient::Connection::internalCommandSync(QList<QByteArray> rawCmd)
+{
+    Command cmd(rawCmd);
+    cmd.markAsHiPriorityCommand();
+    return commandSync(cmd);
+}
+
 void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd,
                                                  CollectionCallback callback,
                                                  QSharedPointer<QVariantList> result)
@@ -268,17 +282,12 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
     runCommand(*cmd);
 }
 
-RedisClient::Response RedisClient::Connection::commandSync(QList<QByteArray> rawCmd,
-                                                           bool isHiPriorityCommand, int db)
+RedisClient::Response RedisClient::Connection::commandSync(const Command& command)
 {
     if (!this->waitConnectedState(m_config.executeTimeout()))
         throw Exception("Cannot execute command. Connection not established.");
 
-    Command cmd(rawCmd, db);
-
-    if (isHiPriorityCommand)
-        cmd.markAsHiPriorityCommand();
-
+    auto cmd = command;
     Executor syncObject(cmd);
 
     try {
@@ -308,14 +317,13 @@ void RedisClient::Connection::auth()
 
     try {
         if (m_config.useAuth()) {
-            QList<QByteArray> auth{"AUTH", m_config.auth().toUtf8()};
-            commandSync(auth, true);
+            internalCommandSync({"AUTH", m_config.auth().toUtf8()});
         }
 
-        Response testResult = commandSync({"PING"}, true, m_dbNumber);
+        Response testResult = internalCommandSync({"PING"});
 
         if (testResult.toRawString() == "+PONG\r\n") {
-            Response infoResult = commandSync({"INFO"}, true);
+            Response infoResult = internalCommandSync({"INFO"});
             m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
 
             setConnectedState();

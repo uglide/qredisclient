@@ -54,6 +54,7 @@ public:
      */
     bool useSsl() const;
     QList<QSslCertificate> sslCaCertificates() const;
+    QString sslCaCertPath() const;
     QString sslPrivateKeyPath() const;
     QString sslLocalCertPath() const;
     void setSslSettigns(QString sslCaCertPath,
@@ -75,6 +76,7 @@ public:
      * @return QString with ssh key
      */
     QString getSshPrivateKey() const;
+    QString getSshPrivateKeyPath() const;
 
     /**
      * @brief setSshTunnelSettings - Set SSH settings
@@ -100,15 +102,14 @@ public:
     QWeakPointer<Connection> getOwner() const;
     void setOwner(QWeakPointer<Connection>);
 
+    QVariantHash getInternalParameters() const;
+
 protected:
     /*
       * Extension API
       * Use following methods to implement custom wrappers
       * around ConnectionConfig class
       */
-
-    QVariantHash getInternalParameters();
-
     template <class T> inline T param(const QString& p) const
     {
         if (m_parameters.contains(p)) return m_parameters[p].value<T>();
@@ -122,7 +123,7 @@ protected:
 
     QString getValidPathFromParameter(const QString& param) const;
 
-private:
+protected:
     QWeakPointer<Connection> m_owner;
     QVariantHash m_parameters;
 };
