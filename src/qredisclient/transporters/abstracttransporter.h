@@ -58,7 +58,7 @@ protected:
 
 private:
     void cleanRunningCommand();
-    void logActiveResponse();
+    void logResponse(const Response &response);
 
 protected:    
     bool m_isCommandRunning;

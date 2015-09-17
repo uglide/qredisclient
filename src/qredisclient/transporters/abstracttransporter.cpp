@@ -71,7 +71,7 @@ void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response&
     if (m_runningCommand.isCanceled())
         return;
 
-    logActiveResponse();
+    logResponse(response);
 
     if (response.isMessage()) {
         QByteArray channel = response.getChannel();
@@ -118,14 +118,17 @@ void RedisClient::AbstractTransporter::cleanRunningCommand()
     m_emitter.clear();
 }
 
-void RedisClient::AbstractTransporter::logActiveResponse()
+void RedisClient::AbstractTransporter::logResponse(const RedisClient::Response& response)
 {
     QString result;
 
-    if (m_response.isErrorMessage()) {
-        result = m_response.toRawString();
-    } else if (m_response.isOkMessage()) {
-        result = "OK";
+    if (response.getType() == RedisClient::Response::Type::Status
+            || response.getType() == RedisClient::Response::Type::Error) {
+        result = response.toRawString();
+    } else if (response.getType() == RedisClient::Response::Type::Bulk) {
+        result = QString("Bulk");
+    } else if (response.getType() == RedisClient::Response::Type::MultiBulk) {
+        result = QString("Array");
     }
 
     emit logEvent(QString("%1 > [runCommand] %2 -> response received : %3")

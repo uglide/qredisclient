@@ -62,7 +62,7 @@ QByteArray RedisClient::Response::getUnusedBuffer()
     return m_responseSource.mid(m_redisReader->pos);
 }
 
-QString RedisClient::Response::toRawString()
+QString RedisClient::Response::toRawString() const
 {
     return m_responseSource.left(1500);
 }
@@ -72,7 +72,7 @@ bool RedisClient::Response::isEmpty() const
     return m_responseSource.isEmpty();
 }
 
-RedisClient::Response::Type RedisClient::Response::getType()
+RedisClient::Response::Type RedisClient::Response::getType() const
 {
     return getResponseType(m_responseSource);
 }

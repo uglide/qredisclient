@@ -22,9 +22,9 @@ public:
     virtual ~Response(void);
 
     QVariant getValue();        
-    Type getType();
+    Type getType() const;
     QByteArray source();
-    QString toRawString();
+    QString toRawString() const;
 
     bool isEmpty() const;
     bool isErrorMessage() const;
