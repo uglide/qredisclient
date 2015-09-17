@@ -67,8 +67,9 @@ protected:
     Response m_response;    
     QQueue<Command> m_commands;
     QSharedPointer<QTimer> m_executionTimer;
+    QSharedPointer<QTimer> m_loopTimer;
     QSharedPointer<ResponseEmitter> m_emitter;
-    QHash<QByteArray, QSharedPointer<ResponseEmitter>> m_subscriptions;
+    QHash<QByteArray, QSharedPointer<ResponseEmitter>> m_subscriptions;    
 };
 
 

@@ -25,8 +25,15 @@ void RedisClient::AbstractTransporter::init()
     m_executionTimer->setSingleShot(true);
     connect(m_executionTimer.data(), SIGNAL(timeout()), this, SLOT(executionTimeout()));
 
+    m_loopTimer = m_executionTimer = QSharedPointer<QTimer>(new QTimer);
+    m_loopTimer->setSingleShot(false);
+    m_loopTimer->setInterval(0);
+    connect(m_loopTimer.data(), SIGNAL(timeout()), this, SLOT(processCommandQueue()));
+
     initSocket();
-    connectToHost();
+
+    if (connectToHost())
+        m_loopTimer->start();
 }
 
 void RedisClient::AbstractTransporter::addCommand(Command cmd)

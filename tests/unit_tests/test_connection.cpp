@@ -153,6 +153,48 @@ void TestConnection::subscribeAndUnsubscribe()
     QCOMPARE(4, messagesRecieved); // Subscribe resp + 3 messages from publisher
 }
 
+void TestConnection::checkTimeout()
+{
+    //given
+    Connection connection(config);
+
+    //when
+    QVERIFY(connection.connect());
+
+    qDebug() << "Wait 1/5"; wait(1000 * 60);
+    qDebug() << "Wait 2/5"; wait(1000 * 60);
+    qDebug() << "Wait 3/5"; wait(1000 * 60);
+    qDebug() << "Wait 4/5"; wait(1000 * 60);
+    qDebug() << "Wait 5/5"; wait(1000 * 60);
+
+    Response actualCommandResult = connection.commandSync("ping");
+
+    //then
+    QCOMPARE(actualCommandResult.toRawString(), QString("+PONG\r\n"));
+}
+
+void TestConnection::checkQueueProcessing()
+{
+    //given
+    Connection connection(config);
+
+    //when
+    QVERIFY(connection.connect());
+
+    for (int i=0; i < 1000; ++i) {
+        connection.command({"INCR", "test_incr_key"});
+        connection.command({"PING"});
+    }
+
+    qDebug() << "Waiting 1 minute before checking result..."; wait(1000 * 60);
+    Connection connection2(config);
+    QVERIFY(connection2.connect());
+    Response actualCommandResult = connection2.commandSync("GET", "test_incr_key");
+
+    //then
+    QCOMPARE(actualCommandResult.getValue().toString(), QString("1000"));
+}
+
 void TestConnection::connectWithAuth()
 {   
     //given
@@ -198,6 +240,8 @@ void TestConnection::connectAndDisconnect()
     QCOMPARE(connectResult, true);
     QCOMPARE(connection.isConnected(), false);
 }
+
+
 #endif
 
 void TestConnection::connectWithInvalidConfig()

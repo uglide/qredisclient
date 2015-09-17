@@ -13,6 +13,14 @@ class TestConnection : public BaseTestCase
 private slots:
     void init();
 
+    /*
+     * Dummy transporter test
+     */
+    void testWithDummyTransporter();
+
+    void testParseServerInfo();
+    void testConfig();
+
 #ifdef INTEGRATION_TESTS
 
     /*
@@ -39,16 +47,12 @@ private slots:
      */
     void subscribeAndUnsubscribe();
 
-#endif
-
     /*
-     * Dummy transporter test
+     * Stability tests
      */
-    void testWithDummyTransporter();
-
-    void testParseServerInfo();
-    void testConfig();
-
+    void checkQueueProcessing();
+    void checkTimeout();
+#endif
 private:
     RedisClient::ConnectionConfig config;
 };

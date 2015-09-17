@@ -44,7 +44,7 @@ public:
         callback(resp, QString());
     }
 
-    void runCommand(const RedisClient::Command &cmd) override
+    void runCommand(RedisClient::Command &cmd) override
     {
         RedisClient::Response resp;
 
