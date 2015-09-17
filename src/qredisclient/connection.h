@@ -165,7 +165,7 @@ public:
      * @brief runCommand - Low level commands execution API
      * @param cmd
      */
-    virtual void runCommand(const Command &cmd);
+    virtual void runCommand(Command &cmd);
 
     /*
      * Low level functions for modification

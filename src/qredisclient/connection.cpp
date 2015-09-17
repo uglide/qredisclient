@@ -137,7 +137,7 @@ RedisClient::Response RedisClient::Connection::commandSync(QString cmd, QString 
     return commandSync(rawCmd, db);
 }
 
-void RedisClient::Connection::runCommand(const Command &cmd)
+void RedisClient::Connection::runCommand(Command &cmd)
 {
     if (!cmd.isValid())
         throw Exception("Command is not valid");
@@ -145,9 +145,21 @@ void RedisClient::Connection::runCommand(const Command &cmd)
     if (!isTransporterRunning() || !m_connected)
         throw Exception("Try run command in not connected state");
 
-    if (cmd.hasDbIndex() && m_dbNumber != cmd.getDbIndex()) {
+    if (cmd.hasDbIndex() && m_dbNumber != cmd.getDbIndex())
         commandSync("SELECT", QString::number(cmd.getDbIndex()));
-        m_dbNumber = cmd.getDbIndex();
+
+    if (cmd.isSelectCommand()) {
+        auto originalCallback = cmd.getCallBack();
+        int dbIndex = cmd.getPartAsString(1).toInt();
+
+        cmd.setCallBack(cmd.getOwner(), [originalCallback, dbIndex, this](Response r, QString e) {
+            if (r.isOkMessage())
+                m_dbNumber = dbIndex;
+
+            qDebug() << "DB was selected:" << dbIndex;
+
+            return originalCallback(r, e);
+        });
     }
 
     if (cmd.getOwner())
