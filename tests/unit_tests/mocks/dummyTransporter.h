@@ -75,13 +75,20 @@ protected:
             m_response = RedisClient::Response();
         }
 
+        auto callback = cmd.getCallBack();
+        auto owner = cmd.getOwner();
+        if (callback && owner) {
+            m_emitter = QSharedPointer<RedisClient::ResponseEmitter>(
+                        new RedisClient::ResponseEmitter(owner, callback));
+        }
+
         sendResponse(m_response);
     }
 
     void reconnect() override {}
     bool isInitialized() const override { return true; }
     bool isSocketReconnectRequired() const override { return false; }
-    bool canReadFromSocket() override { return true; }
+    bool canReadFromSocket() override { return false; }
     QByteArray readFromSocket() override { return QByteArray(); }
     void initSocket() override {}
     bool connectToHost() override { return true; }
