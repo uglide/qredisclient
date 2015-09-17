@@ -9,7 +9,7 @@
 #include "utils/sync.h"
 
 RedisClient::Connection::Connection(const ConnectionConfig &c)
-    : m_config(c), m_connected(false), m_dbNumber(-1), m_currentMode(Mode::Normal)
+    : m_config(c), m_connected(false), m_dbNumber(0), m_currentMode(Mode::Normal)
 {            
     m_timeoutTimer.setSingleShot(true);
     QObject::connect(&m_timeoutTimer, SIGNAL(timeout()), &m_connectionLoop, SLOT(quit()));
@@ -145,13 +145,9 @@ void RedisClient::Connection::runCommand(const Command &cmd)
     if (!isTransporterRunning() || !m_connected)
         throw Exception("Try run command in not connected state");
 
-    if (cmd.hasDbIndex()) {
-        Command select({"SELECT", QString::number(cmd.getDbIndex()).toLatin1()});
-
-        if (cmd.getOwner())
-            select.setCallBack(cmd.getOwner(), cmd.getCallBack());
-
-        runCommand(select);
+    if (cmd.hasDbIndex() && m_dbNumber != cmd.getDbIndex()) {
+        commandSync("SELECT", QString::number(cmd.getDbIndex()));
+        m_dbNumber = cmd.getDbIndex();
     }
 
     if (cmd.getOwner())
