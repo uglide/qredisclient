@@ -35,17 +35,12 @@ protected slots:
 
 private slots:
     void OnSshConnectionError(QxtSshClient::Error);
-    void OnSshConnected();
-    void OnSshConnectionClose();
     void OnSshSocketDestroyed();
 
 private:
     QxtSshTcpSocket * m_socket; // owner of this object is sshClient
     QSharedPointer<QxtSshClient> m_sshClient;
-    QSharedPointer<QEventLoop> m_syncLoop;
-    QSharedPointer<QTimer> m_syncTimer;
 
     bool m_isHostKeyAlreadyAdded;
-    bool m_lastConnectionOk;
 };
 }

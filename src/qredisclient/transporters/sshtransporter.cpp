@@ -4,6 +4,7 @@
 
 #include "qredisclient/connection.h"
 #include "qredisclient/connectionconfig.h"
+#include "qredisclient/utils/sync.h"
 
 #define MAX_BUFFER_SIZE 536800 //response part limit
 
@@ -11,8 +12,7 @@ RedisClient::SshTransporter::SshTransporter(RedisClient::Connection *c)
     :
       RedisClient::AbstractTransporter(c),
       m_socket(nullptr),
-      m_isHostKeyAlreadyAdded(false),
-      m_lastConnectionOk(false)
+      m_isHostKeyAlreadyAdded(false)
 {
 }
 
@@ -20,12 +20,6 @@ void RedisClient::SshTransporter::initSocket()
 {
     m_sshClient = QSharedPointer<QxtSshClient>(new QxtSshClient);
     connect(m_sshClient.data(), &QxtSshClient::error, this, &RedisClient::SshTransporter::OnSshConnectionError);
-    connect(m_sshClient.data(), &QxtSshClient::connected, this, &RedisClient::SshTransporter::OnSshConnected);
-
-    m_syncLoop = QSharedPointer<QEventLoop>(new QEventLoop);
-    m_syncTimer = QSharedPointer<QTimer>(new QTimer);
-    m_syncTimer->setSingleShot(true);
-    connect(m_syncTimer.data(), SIGNAL(timeout()), m_syncLoop.data(), SLOT(quit()));
 }
 
 void RedisClient::SshTransporter::disconnectFromHost()
@@ -53,13 +47,7 @@ bool RedisClient::SshTransporter::isSocketReconnectRequired() const
 
 bool RedisClient::SshTransporter::canReadFromSocket()
 {
-    if (!m_lastConnectionOk) //on first emit
-        m_lastConnectionOk = true;
-
-    if (m_syncLoop->isRunning())
-        m_syncLoop->exit();
-
-    return m_isCommandRunning && m_socket;
+    return m_socket;
 }
 
 QByteArray RedisClient::SshTransporter::readFromSocket()
@@ -81,18 +69,15 @@ bool RedisClient::SshTransporter::connectToHost()
     }
 
     //connect to ssh server
-    m_lastConnectionOk = false;
-    m_syncTimer->start(config.connectionTimeout());
+    SignalWaiter waiter(config.connectionTimeout());
+    waiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::error);
+    waiter.addSuccessSignal(m_sshClient.data(), &QxtSshClient::connected);
     m_sshClient->connectToHost(config.sshUser(), config.sshHost(), config.sshPort());
-    m_syncLoop->exec();
 
-    if (!m_lastConnectionOk) {
-        if (!m_syncTimer->isActive())
-            emit errorOccurred("SSH connection timeout, check connection settings");
+    if (!waiter.wait())
         return false;
-    }
 
-    //connect to redis
+    //connect to redis   
     m_socket = m_sshClient->openTcpSocket(config.host(), config.port());
 
     if (!m_socket) {
@@ -100,14 +85,14 @@ bool RedisClient::SshTransporter::connectToHost()
         return false;
     }
 
+    SignalWaiter socketWaiter(config.connectionTimeout());
+    socketWaiter.addAbortSignal(m_socket, &QxtSshTcpSocket::destroyed);
+    socketWaiter.addSuccessSignal(m_socket, &QxtSshTcpSocket::readyRead);
+
     connect(m_socket, &QxtSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);
     connect(m_socket, SIGNAL(destroyed()), this, SLOT(OnSshSocketDestroyed()));
 
-    m_lastConnectionOk = false;
-    m_syncTimer->start(config.connectionTimeout());
-    m_syncLoop->exec();
-
-    if (!m_lastConnectionOk) {
+    if (!socketWaiter.wait()) {
         emit errorOccurred(QString("SSH connection established, but redis connection failed"));
         return false;
     }
@@ -138,28 +123,7 @@ void RedisClient::SshTransporter::OnSshConnectionError(QxtSshClient::Error error
         return;
     }
 
-    if (m_syncLoop->isRunning()) {
-        m_syncLoop->exit();
-    }
-
     emit errorOccurred(QString("SSH Connection error: %1").arg(getSshErrorString(error)));
-}
-
-void RedisClient::SshTransporter::OnSshConnected()
-{
-    m_lastConnectionOk = true;
-
-    if (m_syncLoop->isRunning()) {
-        m_syncLoop->exit();
-    }
-}
-
-void RedisClient::SshTransporter::OnSshConnectionClose()
-{
-    if (m_syncLoop->isRunning())
-        m_syncLoop->exit();
-
-    emit logEvent("SSH connection closed");
 }
 
 void RedisClient::SshTransporter::OnSshSocketDestroyed()
@@ -171,7 +135,8 @@ void RedisClient::SshTransporter::OnSshSocketDestroyed()
 void RedisClient::SshTransporter::reconnect()
 {
     emit logEvent("Reconnect to host");
+    m_loopTimer->stop();
     if (m_socket) m_socket->close();
-    m_sshClient->resetState();
+    m_sshClient->resetState();    
     connectToHost();
 }

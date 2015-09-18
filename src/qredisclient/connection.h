@@ -23,6 +23,7 @@ class Executor;
 struct ServerInfo
 {
     double version;
+    bool clusterMode;
     static ServerInfo fromString(const QString& info);
 };
 
@@ -35,7 +36,7 @@ class Connection : public QObject
     Q_OBJECT
     ADD_EXCEPTION
 public:
-    enum class Mode { Normal, PubSub };
+    enum class Mode { Normal, PubSub, Cluster };
     class InvalidModeException : public Connection::Exception {};
 public:
     /**
@@ -63,13 +64,6 @@ public:
      * @return
      */
     bool isConnected();
-
-    /**
-     * @brief Wait connected state for timeout
-     * timeout - in miliseconds
-     * @return
-     */
-    bool waitConnectedState(unsigned int);
 
     /**
      * @brief disconnect from redis-server
@@ -184,7 +178,6 @@ signals:
     void authError(const QString&);
 
 protected:
-    void setConnectedState();
     void createTransporter();
     bool isTransporterRunning();
 
@@ -195,19 +188,13 @@ protected:
                             QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>());
 
 protected slots:
-    void connectionReady();
-    void commandAddedToTransporter();
     void auth();
 
 protected:
-    ConnectionConfig m_config;
-    bool m_connected;    
+    ConnectionConfig m_config;   
     QSharedPointer<QThread> m_transporterThread;
     QSharedPointer<AbstractTransporter> m_transporter;
-    QEventLoop m_connectionLoop;
-    QEventLoop m_cmdLoop;
 
-    QTimer m_timeoutTimer;
     int m_dbNumber;
     ServerInfo m_serverInfo;
     Mode m_currentMode;

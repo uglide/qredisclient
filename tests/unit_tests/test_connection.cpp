@@ -180,19 +180,14 @@ void TestConnection::checkQueueProcessing()
 
     //when
     QVERIFY(connection.connect());
+    connection.commandSync("SET", "test_incr_key", "0");
 
     for (int i=0; i < 1000; ++i) {
         connection.command({"INCR", "test_incr_key"});
-        connection.command({"PING"});
     }
 
-    qDebug() << "Waiting 1 minute before checking result..."; wait(1000 * 60);
-    Connection connection2(config);
-    QVERIFY(connection2.connect());
-    Response actualCommandResult = connection2.commandSync("GET", "test_incr_key");
-
     //then
-    QCOMPARE(actualCommandResult.getValue().toString(), QString("1000"));
+    //no exceptions
 }
 
 void TestConnection::connectWithAuth()
@@ -288,7 +283,7 @@ void TestConnection::testParseServerInfo()
                      "redis_git_sha1:3bf72d0d\n"
                      "redis_git_dirty:0\n"
                      "redis_build_id:69b45658ca5a9e2d\n"
-                     "redis_mode:standalone\n"
+                     "redis_mode:cluster\n"
                      "os:Linux 3.13.7-x86_64-linode38 x86_64\n"
                      "arch_bits:32\n"
                      "multiplexing_api:epoll\n"
@@ -307,6 +302,7 @@ void TestConnection::testParseServerInfo()
 
     //then
     QCOMPARE(actualResult.version, 2.9);
+    QCOMPARE(actualResult.clusterMode, true);
 }
 
 void TestConnection::testConfig()

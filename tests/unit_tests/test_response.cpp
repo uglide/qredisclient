@@ -201,6 +201,4 @@ void TestResponse::multipleResponsesInTheBuffer()
 
     //then
     QVERIFY(test.hasUnusedBuffer());
-    //QVERIFY(test.getUnusedBuffer())
-    //TODO: ??
 }

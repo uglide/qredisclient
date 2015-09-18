@@ -117,18 +117,6 @@ public:
     bool hasCallback() const;
 
     /**
-     * @brief Mark this command as cancelled.
-     * This function used internally in AbstractTransporter
-     */
-    void cancel();
-
-    /**
-     * @brief isCanceled
-     * @return
-     */
-    bool isCanceled() const;
-
-    /**
      * @brief Mark this command as High Priority command.
      * Command will be added to the begining of the Connection queue instead of end.
      */
@@ -167,7 +155,6 @@ protected:
     QObject * m_owner;
     QList<QByteArray> m_commandWithArguments;
     int m_dbIndex;
-    bool m_commandCanceled;
     bool m_hiPriorityCommand;
     Callback m_callback;
 };

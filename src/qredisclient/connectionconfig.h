@@ -37,6 +37,9 @@ public:
     QString auth() const;
     uint port() const;
 
+    void setHost(QString host);
+    void setPort(uint port);
+
     bool isNull() const;
     bool useAuth() const;
     bool isValid() const;

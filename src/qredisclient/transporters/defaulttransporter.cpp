@@ -1,6 +1,7 @@
 #include "defaulttransporter.h"
 #include "qredisclient/connection.h"
 #include "qredisclient/connectionconfig.h"
+#include "qredisclient/utils/sync.h"
 
 RedisClient::DefaultTransporter::DefaultTransporter(RedisClient::Connection *c)
     : RedisClient::AbstractTransporter(c), m_socket(nullptr), m_errorOccurred(false)
@@ -27,6 +28,8 @@ void RedisClient::DefaultTransporter::disconnectFromHost()
     if (m_socket.isNull())
         return;
 
+    m_executionTimer.clear();
+    m_loopTimer.clear();
     m_socket->abort();
     m_socket.clear();
 }
@@ -110,8 +113,10 @@ void RedisClient::DefaultTransporter::sendCommand(const QByteArray& cmd)
 
 void RedisClient::DefaultTransporter::error(QAbstractSocket::SocketError error)
 {
-    if (error == QAbstractSocket::UnknownSocketError && connectToHost()) {
-        return runCommand(m_runningCommand);
+    if (error == QAbstractSocket::UnknownSocketError
+            && connectToHost()
+            && m_runningCommand) {
+        return runCommand(m_runningCommand->cmd);
     }
 
     m_errorOccurred = true;
@@ -133,6 +138,7 @@ void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors)
 void RedisClient::DefaultTransporter::reconnect()
 {
     emit logEvent("Reconnect to host");
-    m_socket->abort();
+    m_loopTimer->stop();
+    m_socket->abort();    
     connectToHost();
 }

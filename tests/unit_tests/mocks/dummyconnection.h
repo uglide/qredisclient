@@ -13,15 +13,16 @@ public:
           getServerVersionCalled(0), m_version(version), 
           m_raiseExceptionOnConnect(raise_error)
     {
-        if (!m_raiseExceptionOnConnect)
-            m_connected = true;
+    }
+
+    bool isConnected()
+    {
+        return !m_raiseExceptionOnConnect;
     }
 
     bool connect()
     {
-        if (!m_raiseExceptionOnConnect)
-            m_connected = true;
-        return m_connected;            
+        return !m_raiseExceptionOnConnect;
     }
 
     double getServerVersion() override
