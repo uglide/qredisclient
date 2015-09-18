@@ -44,6 +44,7 @@ protected slots:
     virtual void executionTimeout();
     virtual void reconnect() = 0;
     virtual void processCommandQueue();
+    virtual void runProcessingLoop();
 
 protected:
     virtual bool isInitialized() const = 0;
@@ -57,19 +58,27 @@ protected:
     virtual void sendResponse(const Response &response);
 
 private:
-    void cleanRunningCommand();
     void logResponse(const Response &response);
+    void processClusterRedirect(const Response& r);
+    void addSubscriptionsFromRunningCommand();
 
-protected:    
-    bool m_isCommandRunning;
+protected:
+    class RunningCommand {
+    public:
+        RunningCommand(const Command& cmd);
+        Command cmd;
+        QSharedPointer<ResponseEmitter> emitter;
+    };
+
+protected:
     Connection * m_connection;
-    Command m_runningCommand;
+    QSharedPointer<RunningCommand> m_runningCommand;
     Response m_response;    
     QQueue<Command> m_commands;
     QSharedPointer<QTimer> m_executionTimer;
     QSharedPointer<QTimer> m_loopTimer;
-    QSharedPointer<ResponseEmitter> m_emitter;
-    QHash<QByteArray, QSharedPointer<ResponseEmitter>> m_subscriptions;    
+    typedef QHash<QByteArray, QSharedPointer<ResponseEmitter>> Subscriptions;
+    Subscriptions m_subscriptions;
 };
 
 
@@ -82,6 +91,7 @@ class ResponseEmitter : public QObject {
     Q_OBJECT
 public:
     ResponseEmitter(QObject* owner, Command::Callback callback)
+        : owner(owner)
     {
         QObject::connect(this, &ResponseEmitter::response,
                          owner, callback, Qt::AutoConnection);
@@ -91,6 +101,7 @@ public:
     {        
         emit response(r, err);
     }
+    QObject* owner;
 signals:
     void response(Response, QString);
 };

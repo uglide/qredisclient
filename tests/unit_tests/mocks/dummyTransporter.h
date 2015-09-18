@@ -60,8 +60,7 @@ public slots:
 protected:
     virtual void runCommand(const RedisClient::Command &cmd) override
     {
-        executedCommands.push_back(cmd);        
-        m_runningCommand = cmd;
+        executedCommands.push_back(cmd);
 
         if (fakeResponses.size() > 0) {            
             m_response = fakeResponses.first();
@@ -75,12 +74,7 @@ protected:
             m_response = RedisClient::Response();
         }
 
-        auto callback = cmd.getCallBack();
-        auto owner = cmd.getOwner();
-        if (callback && owner) {
-            m_emitter = QSharedPointer<RedisClient::ResponseEmitter>(
-                        new RedisClient::ResponseEmitter(owner, callback));
-        }
+        m_runningCommand = QSharedPointer<RunningCommand>(new RunningCommand(cmd));
 
         sendResponse(m_response);
     }

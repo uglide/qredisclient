@@ -208,7 +208,7 @@ RedisClient::Response::Type RedisClient::Response::getResponseType(const char ty
 
 bool RedisClient::Response::isValid()
 {
-    return m_result || parse();
+    return m_result || (m_responseSource.endsWith("\r\n") && parse());
 }
 
 bool RedisClient::Response::isMessage() const
@@ -231,6 +231,38 @@ bool RedisClient::Response::hasUnusedBuffer() const
     return m_result
             && m_redisReader->pos > 0
             && m_redisReader->pos < m_responseSource.size();
+}
+
+bool RedisClient::Response::isAskRedirect() const
+{
+    return getResponseType(m_responseSource) == Error
+            && m_responseSource.startsWith("-ASK");
+}
+
+bool RedisClient::Response::isMovedRedirect() const
+{
+    return getResponseType(m_responseSource) == Error
+            && m_responseSource.startsWith("-MOVED");
+}
+
+QByteArray RedisClient::Response::getRedirectionHost() const
+{
+    if (!isMovedRedirect() && !isAskRedirect())
+        return QByteArray();
+
+    QByteArray hostAndPort = m_responseSource.split(' ')[2];
+
+    return hostAndPort.split(':')[0];
+}
+
+uint RedisClient::Response::getRedirectionPort() const
+{
+    if (!isMovedRedirect() && !isAskRedirect())
+        return 0;
+
+    QByteArray hostAndPort = m_responseSource.split(' ')[2];
+
+    return QString(hostAndPort.split(':')[1]).toUInt();
 }
 
 QByteArray RedisClient::Response::getChannel() const

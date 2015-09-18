@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include <QCommandLineParser>
+#include <QDebug>
 
 #include <iostream>
 #include "qredisclient/redisclient.h"
@@ -26,6 +27,7 @@ int main(int argc, char *argv[])
     }
 
     RedisClient::ConnectionConfig config("127.0.0.1");
+    config.setPort(7000);
     RedisClient::Connection connection(config);
 
     // convert QStringList to QList<QByteArray>
@@ -34,7 +36,16 @@ int main(int argc, char *argv[])
         cmd.append(part.toUtf8());
     }
 
+    QObject::connect(&connection, &RedisClient::Connection::log, [](QString msg) {
+        qDebug() << "Connection:" << msg;
+    });
+
+    QObject::connect(&connection, &RedisClient::Connection::error, [](QString msg) {
+        qDebug() << "Connection error:" << msg;
+    });
+
     try {
+        connection.connect();
         auto result = connection.commandSync(cmd);
         QVariant val = result.getValue();
         std::cout << RedisClient::Response::valueToHumanReadString(val).toStdString();

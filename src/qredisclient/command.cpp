@@ -5,20 +5,20 @@
 
 RedisClient::Command::Command()
     : m_owner(nullptr), m_commandWithArguments(), m_dbIndex(-1),
-      m_commandCanceled(false), m_hiPriorityCommand(false)
+      m_hiPriorityCommand(false)
 {
 }
 
 RedisClient::Command::Command(const QList<QByteArray> &cmd, int db)
     : m_owner(nullptr), m_commandWithArguments(cmd), m_dbIndex(db),
-      m_commandCanceled(false), m_hiPriorityCommand(false)
+      m_hiPriorityCommand(false)
 {
 }
 
 RedisClient::Command::Command(const QList<QByteArray> &cmd, QObject *context,
                               Callback callback, int db)
     : m_owner(context), m_commandWithArguments(cmd), m_dbIndex(db),
-      m_commandCanceled(false), m_hiPriorityCommand(false), m_callback(callback)
+      m_hiPriorityCommand(false), m_callback(callback)
 {
 }
 
@@ -182,22 +182,12 @@ QByteArray RedisClient::Command::getByteRepresentation() const
     return result;
 }
 
-void RedisClient::Command::cancel()
-{
-    m_commandCanceled = true;
-}
-
 void RedisClient::Command::markAsHiPriorityCommand()
 {
     m_hiPriorityCommand = true;
 }
 
-bool RedisClient::Command::isCanceled() const
-{
-    return m_commandCanceled;
-}
-
 bool RedisClient::Command::isValid() const
 {
-    return !isCanceled() && !isEmpty();
+    return !isEmpty();
 }

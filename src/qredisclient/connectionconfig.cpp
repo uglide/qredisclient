@@ -48,6 +48,16 @@ uint RedisClient::ConnectionConfig::port() const
     return param<uint>("port");
 }
 
+void RedisClient::ConnectionConfig::setHost(QString host)
+{
+    setParam<QString>("host", host);
+}
+
+void RedisClient::ConnectionConfig::setPort(uint port)
+{
+    setParam<uint>("port", port);
+}
+
 uint RedisClient::ConnectionConfig::executeTimeout() const
 {
     return param<uint>("timeout_execute");

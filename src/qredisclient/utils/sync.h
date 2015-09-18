@@ -24,4 +24,32 @@ private:
     QEventLoop m_loop;
     QTimer m_timeoutTimer;
 };
+
+class SignalWaiter : public QObject
+{
+    Q_OBJECT
+public:
+    SignalWaiter(uint timeout);
+    bool wait();
+
+    template <typename Func1>
+    void addAbortSignal(const typename QtPrivate::FunctionPointer<Func1>::Object *sender, Func1 signal)
+    {
+        connect(sender, signal, this, &SignalWaiter::abort);
+    }
+
+    template <typename Func1>
+    void addSuccessSignal(const typename QtPrivate::FunctionPointer<Func1>::Object *sender, Func1 signal)
+    {
+        connect(sender, signal, this, &SignalWaiter::success);
+    }
+
+protected slots:
+    void abort();
+    void success();
+private:
+    QEventLoop m_loop;
+    QTimer m_timeoutTimer;
+    bool m_result;
+};
 }

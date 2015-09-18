@@ -9,25 +9,20 @@
 #include "utils/sync.h"
 
 RedisClient::Connection::Connection(const ConnectionConfig &c)
-    : m_config(c), m_connected(false), m_dbNumber(0), m_currentMode(Mode::Normal)
+    : m_config(c), m_dbNumber(0), m_currentMode(Mode::Normal)
 {            
-    m_timeoutTimer.setSingleShot(true);
-    QObject::connect(&m_timeoutTimer, SIGNAL(timeout()), &m_connectionLoop, SLOT(quit()));
 }
 
 RedisClient::Connection::~Connection()
 {
-    if (isTransporterRunning())
+    if (isConnected())
         disconnect();
 }
 
 bool RedisClient::Connection::connect() // todo: add block/unblock parameter
 {
     if (isConnected())
-        return true;    
-
-    if (isTransporterRunning())
-        return false;
+        return true;
 
     if (m_config.isValid() == false)
         throw Exception("Invalid config detected");
@@ -35,7 +30,7 @@ bool RedisClient::Connection::connect() // todo: add block/unblock parameter
     if (m_transporter.isNull())
         createTransporter();
 
-    // Create & run transporter
+    // Create & run transporter    
     m_transporterThread = QSharedPointer<QThread>(new QThread);
     m_transporter->moveToThread(m_transporterThread.data());
     QObject::connect(m_transporterThread.data(), &QThread::started,
@@ -44,33 +39,24 @@ bool RedisClient::Connection::connect() // todo: add block/unblock parameter
                      m_transporter.data(), &AbstractTransporter::disconnectFromHost);
     QObject::connect(m_transporter.data(), &AbstractTransporter::connected,
                      this, &Connection::auth);
-    QObject::connect(m_transporter.data(), &AbstractTransporter::commandAdded,
-                     this, &Connection::commandAddedToTransporter);
 
     //wait for data
-    QEventLoop loop;
-    QTimer timeoutTimer;
+    SignalWaiter waiter(m_config.connectionTimeout());
+    waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
+    waiter.addAbortSignal(this, &Connection::authError);
+    waiter.addSuccessSignal(this, &Connection::authOk);
+    m_transporterThread->start();
+    bool result = waiter.wait();
 
-    //configure sync objects
-    timeoutTimer.setSingleShot(true);
-    QObject::connect(&timeoutTimer, SIGNAL(timeout()), &loop, SLOT(quit()));
-    QObject::connect(m_transporter.data(), SIGNAL(errorOccurred(const QString&)), &loop, SLOT(quit()));
-    QObject::connect(this, SIGNAL(authError(const QString&)), &loop, SLOT(quit()));
-    QObject::connect(this, SIGNAL(authOk()), &loop, SLOT(quit()));
-
-    m_transporterThread->start();    
-    timeoutTimer.start(m_config.connectionTimeout());
-    loop.exec();
-
-    if (!m_connected)
+    if (!result)
         disconnect();
 
-    return m_connected;
+    return result;
 }
 
 bool RedisClient::Connection::isConnected()
 {
-    return m_connected;
+    return m_transporter && isTransporterRunning();
 }
 
 void RedisClient::Connection::disconnect()
@@ -80,8 +66,6 @@ void RedisClient::Connection::disconnect()
         m_transporterThread->wait();        
         m_transporter.clear();
     }
-
-    m_connected = false;
 }
 
 void RedisClient::Connection::command(QList<QByteArray> rawCmd, int db)
@@ -142,7 +126,7 @@ void RedisClient::Connection::runCommand(Command &cmd)
     if (!cmd.isValid())
         throw Exception("Command is not valid");
 
-    if (!isTransporterRunning() || !m_connected)
+    if (!isConnected())
         throw Exception("Try run command in not connected state");
 
     if (cmd.hasDbIndex() && m_dbNumber != cmd.getDbIndex())
@@ -166,7 +150,13 @@ void RedisClient::Connection::runCommand(Command &cmd)
         QObject::connect(cmd.getOwner(), SIGNAL(destroyed(QObject *)),
                 m_transporter.data(), SLOT(cancelCommands(QObject *)));
 
+    // wait for signal from transporter
+    SignalWaiter waiter(m_config.executeTimeout());
+    waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::commandAdded);
+    waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
+
     emit addCommandToWorker(cmd);
+    waiter.wait();
 }
 
 void RedisClient::Connection::retrieveCollection(QSharedPointer<RedisClient::ScanCommand> cmd,
@@ -179,20 +169,6 @@ void RedisClient::Connection::retrieveCollection(QSharedPointer<RedisClient::Sca
         throw Exception("Invalid command");
 
     processScanCommand(cmd, callback);
-}
-
-bool RedisClient::Connection::waitConnectedState(unsigned int timeoutInMs)
-{
-    if (isConnected())
-        return true;
-
-    if (!isTransporterRunning())
-        return false;
-
-    m_timeoutTimer.start(timeoutInMs);
-    m_connectionLoop.exec();
-
-    return isConnected();
 }
 
 RedisClient::ConnectionConfig RedisClient::Connection::getConfig() const
@@ -213,16 +189,6 @@ RedisClient::Connection::Mode RedisClient::Connection::mode() const
 double RedisClient::Connection::getServerVersion()
 {
     return m_serverInfo.version;
-}
-
-void RedisClient::Connection::setConnectedState()
-{
-    m_connected = true;
-
-    if (m_connectionLoop.isRunning())
-        m_connectionLoop.exit();
-
-    emit connected();
 }
 
 void RedisClient::Connection::createTransporter()
@@ -292,9 +258,6 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
 
 RedisClient::Response RedisClient::Connection::commandSync(const Command& command)
 {
-    if (!this->waitConnectedState(m_config.executeTimeout()))
-        throw Exception("Cannot execute command. Connection not established.");
-
     auto cmd = command;
     Executor syncObject(cmd);
 
@@ -307,21 +270,9 @@ RedisClient::Response RedisClient::Connection::commandSync(const Command& comman
     return syncObject.waitForResult(m_config.executeTimeout());
 }
 
-void RedisClient::Connection::connectionReady()
-{
-    // todo: create signal in operations::auth() method and connect to this signal
-    m_connected = true;
-    // todo: do another ready staff
-}
-
-void RedisClient::Connection::commandAddedToTransporter()
-{   
-}
-
 void RedisClient::Connection::auth()
 {
     emit log("AUTH");
-    m_connected = true;    
 
     try {
         if (m_config.useAuth()) {
@@ -330,22 +281,25 @@ void RedisClient::Connection::auth()
 
         Response testResult = internalCommandSync({"PING"});
 
-        if (testResult.toRawString() == "+PONG\r\n") {
-            Response infoResult = internalCommandSync({"INFO"});
-            m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
-
-            setConnectedState();
-            emit log("AUTH OK");
-            emit authOk();
-        } else {
+        if (testResult.toRawString() != "+PONG\r\n") {
             emit error("AUTH ERROR");
             emit authError("Redis server require password or password invalid");
-            m_connected = false;
+            return;
         }
-    } catch (const Exception&) {
-        emit error("Connection error on AUTH");
+
+        Response infoResult = internalCommandSync({"INFO"});
+        m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
+
+        // TODO(u_glide): add option to disable automatic mode switching
+        if (m_serverInfo.clusterMode)
+            m_currentMode = Mode::Cluster;
+
+        emit log("AUTH OK");
+        emit authOk();
+        emit connected();
+    } catch (const Exception& e) {
+        emit error(QString("Connection error on AUTH: %1").arg(e.what()));
         emit authError("Connection error on AUTH");
-        m_connected = false;
     }
 }
 
@@ -365,15 +319,12 @@ QSharedPointer<RedisClient::AbstractTransporter> RedisClient::Connection::getTra
 RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
 {
     QRegExp versionRegex("redis_version:([0-9]\\.[0-9]+)", Qt::CaseInsensitive, QRegExp::RegExp2);
-
-    int pos = versionRegex.indexIn(info);
+    QRegExp modeRegex("redis_mode:([a-z]+)", Qt::CaseInsensitive, QRegExp::RegExp2);
 
     RedisClient::ServerInfo result;
-    if (pos == -1) {
-        result.version = 0.0;
-    } else {
-        result.version = versionRegex.cap(1).toDouble();
-    }
-
+    result.version = (versionRegex.indexIn(info) == -1)?
+                0.0 : versionRegex.cap(1).toDouble();
+    result.clusterMode = (modeRegex.indexIn(info) != -1
+            && modeRegex.cap(1) == "cluster");
     return result;
 }

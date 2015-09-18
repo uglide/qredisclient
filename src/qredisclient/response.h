@@ -38,6 +38,12 @@ public:
     // Pub/Sub support
     QByteArray getChannel() const;
 
+    // Cluster support
+    bool isAskRedirect() const;
+    bool isMovedRedirect() const;
+    QByteArray getRedirectionHost() const;
+    uint getRedirectionPort() const;
+
 public:
     void setSource(const QByteArray&);    
     void appendToSource(const QByteArray&);
