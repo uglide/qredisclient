@@ -22,7 +22,10 @@ public:
 
     bool connect() override
     {
-        return !m_raiseExceptionOnConnect;
+        if (m_raiseExceptionOnConnect)
+            throw RedisClient::Connection::Exception("fake error");
+
+        return true;
     }
 
     void disconnect() override {}
