@@ -57,18 +57,18 @@ public:
      * @return true - on success
      * @throws Connection::Exception if config is invalid or something went wrong.
      */
-    bool connect();
+    virtual bool connect();
 
     /**
      * @brief isConnected
      * @return
      */
-    bool isConnected();
+    virtual bool isConnected();
 
     /**
      * @brief disconnect from redis-server
      */
-    void disconnect();
+    virtual void disconnect();
 
     /**
      * @brief getConfig

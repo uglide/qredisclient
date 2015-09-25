@@ -15,15 +15,17 @@ public:
     {
     }
 
-    bool isConnected()
+    bool isConnected() override
     {
         return !m_raiseExceptionOnConnect;
     }
 
-    bool connect()
+    bool connect() override
     {
         return !m_raiseExceptionOnConnect;
     }
+
+    void disconnect() override {}
 
     double getServerVersion() override
     {
