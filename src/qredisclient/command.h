@@ -64,7 +64,7 @@ public:
      * @brief Get source command as single string
      * @return
      */
-    QString getRawString() const;
+    QString getRawString(int limit=200) const;
 
     /**
      * @brief Get source command as list of args

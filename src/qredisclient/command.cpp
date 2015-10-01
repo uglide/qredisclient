@@ -143,9 +143,11 @@ QObject *RedisClient::Command::getOwner() const
     return m_owner;
 }
 
-QString RedisClient::Command::getRawString() const
+QString RedisClient::Command::getRawString(int limit) const
 {
-    return m_commandWithArguments.join(' ');
+
+    return (limit > 0)? m_commandWithArguments.join(' ').left(limit)
+                  : m_commandWithArguments.join(' ');
 }
 
 QList<QByteArray> RedisClient::Command::getSplitedRepresentattion() const
