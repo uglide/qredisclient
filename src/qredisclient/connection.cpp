@@ -66,6 +66,7 @@ void RedisClient::Connection::disconnect()
         m_transporterThread->wait();        
         m_transporter.clear();
     }
+    m_dbNumber = 0;
 }
 
 void RedisClient::Connection::command(QList<QByteArray> rawCmd, int db)
@@ -266,7 +267,10 @@ RedisClient::Response RedisClient::Connection::commandSync(const Command& comman
         throw Exception("Cannot execute command." + QString(e.what()));
     }
 
-    return syncObject.waitForResult(m_config.executeTimeout());
+    RedisClient::Response r = syncObject.waitForResult(m_config.executeTimeout());
+    if (r.isEmpty())
+        throw Exception("Execution timeout");
+    return r;
 }
 
 void RedisClient::Connection::auth()
