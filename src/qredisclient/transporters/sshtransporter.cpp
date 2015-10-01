@@ -66,16 +66,23 @@ bool RedisClient::SshTransporter::connectToHost()
 
     if (!privateKey.isEmpty()) {
         m_sshClient->setKeyFiles("", privateKey);
-    }
+    }    
 
     //connect to ssh server
     SignalWaiter waiter(config.connectionTimeout());
-    waiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::error);
+    waiter.addAbortSignal(this, &RedisClient::SshTransporter::errorOccurred);
     waiter.addSuccessSignal(m_sshClient.data(), &QxtSshClient::connected);
+
+    emit logEvent("Connecting to SSH host...");
+
     m_sshClient->connectToHost(config.sshUser(), config.sshHost(), config.sshPort());
 
-    if (!waiter.wait())
+    if (!waiter.wait()) {
+        emit errorOccurred("Cannot connect to SSH host");
         return false;
+    }
+
+    emit logEvent("SSH tunnel established. Connecting to redis-server...");
 
     //connect to redis   
     m_socket = m_sshClient->openTcpSocket(config.host(), config.port());
