@@ -137,11 +137,10 @@ void RedisClient::Connection::runCommand(Command &cmd)
         int dbIndex = cmd.getPartAsString(1).toInt();
 
         cmd.setCallBack(cmd.getOwner(), [originalCallback, dbIndex, this](Response r, QString e) {
-            if (r.isOkMessage())
+            if (r.isOkMessage()) {
                 m_dbNumber = dbIndex;
-
-            qDebug() << "DB was selected:" << dbIndex;
-
+                qDebug() << "DB was selected:" << dbIndex;
+            }
             return originalCallback(r, e);
         });
     }
