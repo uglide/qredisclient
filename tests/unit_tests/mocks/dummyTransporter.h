@@ -51,7 +51,6 @@ public slots:
         RedisClient::Response r("+PONG\r\n");
         fakeResponses.push_front(r);
 
-        qDebug() << "Transporter connect: OK";
         emit connected();
     }
     virtual void disconnect() { disconnectCalls++; }
