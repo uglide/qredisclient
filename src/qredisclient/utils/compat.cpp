@@ -29,3 +29,12 @@ QJsonObject QJsonObjectFromVariantHash(const QVariantHash &hash)
         object.insert(it.key(), QJsonValue::fromVariant(it.value()));
     return object;
 }
+
+QList<QByteArray> convertQVariantList(const QList<QVariant> &list)
+{
+    QList<QByteArray> r;
+    foreach (QVariant v, list) {
+        r.append(v.toByteArray());
+    }
+    return r;
+}

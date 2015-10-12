@@ -143,7 +143,7 @@ QObject *RedisClient::Command::getOwner() const
     return m_owner;
 }
 
-QString RedisClient::Command::getRawString(int limit) const
+QByteArray RedisClient::Command::getRawString(int limit) const
 {
 
     return (limit > 0)? m_commandWithArguments.join(' ').left(limit)

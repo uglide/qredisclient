@@ -1,5 +1,6 @@
 #include "abstracttransporter.h"
 #include "qredisclient/connection.h"
+#include "qredisclient/utils/text.h"
 #include <QDebug>
 
 RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *connection)
@@ -152,7 +153,7 @@ void RedisClient::AbstractTransporter::logResponse(const RedisClient::Response& 
 
     emit logEvent(QString("%1 > [runCommand] %2 -> response received : %3")
                   .arg(m_connection->getConfig().name())
-                  .arg(m_runningCommand->cmd.getRawString())
+                  .arg(printableString(m_runningCommand->cmd.getRawString()))
                   .arg(result));
 }
 
@@ -233,7 +234,7 @@ void RedisClient::AbstractTransporter::runCommand(const RedisClient::Command &co
 
     emit logEvent(QString("%1 > [runCommand] %2")
                   .arg(m_connection->getConfig().name())
-                  .arg(command.getRawString()));
+                  .arg(printableString(command.getRawString())));
 
     m_response.reset();
     m_runningCommand = QSharedPointer<RunningCommand>(new RunningCommand(command));

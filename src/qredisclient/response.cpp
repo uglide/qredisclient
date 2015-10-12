@@ -3,6 +3,8 @@
 #include <QVector>
 #include <QObject>
 #include <QVariantList>
+#include "qredisclient/utils/text.h"
+#include "qredisclient/utils/compat.h"
 
 const redisReplyObjectFunctions RedisClient::Response::defaultFunctions = {
     RedisClient::Response::createStringObject,
@@ -282,18 +284,18 @@ QString RedisClient::Response::valueToHumanReadString(QVariant& value)
     {
         return "NULL";
     } else if (value.type() == QVariant::StringList) {
-        return value.toStringList().join("\r\n");
+        return printableString(convertQVariantList(value.toList()).join("\r\n"));
     } else if (value.type() == QVariant::Type::List) {
         QVariantList val = value.toList();
-        QString result;
+        QByteArray result;
         for (int i = 0; i < val.size(); i++) {
-            result.append(QString("%1) ").arg(QString::number(i+1)));
+            result.append(QString("%1) ").arg(QString::number(i+1)).toUtf8());
             if (val.at(i).type() == QVariant::Type::List) {
-                result.append(val.at(i).toStringList().join("\r\n"));
+                result.append(convertQVariantList(val.at(i).toList()).join("\r\n"));
             } else {
-                result.append(val.at(i).toString());
+                result.append(printableString(val.at(i).toByteArray()));
             }
-            result.append("\n");
+            result.append("\r\n");
         }
         return result;
     }

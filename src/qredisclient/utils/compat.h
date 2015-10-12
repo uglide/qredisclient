@@ -14,7 +14,14 @@
  * @param list
  * @return
  */
-QList<QByteArray> convertStringList(const QStringList&list);
+QList<QByteArray> convertStringList(const QStringList &list);
+
+/**
+ * @brief convertQVariantList
+ * @param list
+ * @return
+ */
+QList<QByteArray> convertQVariantList(const QList<QVariant> &list);
 
 /**
  * @brief QJsonObjectFromVariantHash
