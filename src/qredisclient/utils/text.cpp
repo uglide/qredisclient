@@ -1,4 +1,5 @@
 #include "text.h"
+#include <functional>
 
 QString printableString(const QByteArray &raw)
 {
@@ -33,4 +34,60 @@ bool isBinary(const QByteArray &raw)
     QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     const QString text = codec->toUnicode(raw.constData(), raw.size(), &state);       
     return state.invalidChars != 0 || raw.contains('\x00');
+}
+
+
+QByteArray printableStringToBinary(const QString &str)
+{
+    QByteArray processedString;
+
+    ushort quoteStarted = false;
+    bool xFound = false;
+    QByteArray hexBuff;
+
+    std::function<void()> clear = [&quoteStarted, &xFound, &hexBuff]() {
+        quoteStarted = xFound = false;
+        hexBuff.clear();
+    };
+
+    for (QString::const_iterator i=str.constBegin(); i != str.constEnd(); ++i)
+    {
+        if (quoteStarted) {
+
+            if (xFound) {
+                if (('0' <= *i && *i <= '9')
+                        || ('a' <= i->toLower() && i->toLower() <= 'f')) {
+
+                    hexBuff.append(*i);
+
+                    if (hexBuff.size() == 2) {
+                        processedString.append(QByteArray::fromHex(hexBuff));
+                        clear();
+                    }
+
+                } else {
+                    processedString.append('\\');
+                    processedString.append('x');
+                    processedString.append(hexBuff);
+                    clear();
+                }
+            } else {
+                if (*i == 'x') {
+                   xFound = true;
+                   continue;
+                } else {
+                    processedString.append('\\');
+                    processedString.append(*i);
+                    clear();
+                }
+            }
+
+        } else if (*i == '\\') {
+            quoteStarted = true;
+        } else {
+            processedString.append(*i);
+        }
+    }
+
+    return processedString;
 }

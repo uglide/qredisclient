@@ -8,6 +8,7 @@
 #include "test_connection.h"
 #include "test_ssh.h"
 #include "test_config.h"
+#include "test_text.h"
 #include "qredisclient/redisclient.h"
 
 int main(int argc, char *argv[])
@@ -22,6 +23,7 @@ int main(int argc, char *argv[])
             + QTest::qExec(new TestResponse, argc, argv)
             + QTest::qExec(new TestConnection, argc, argv)
             + QTest::qExec(new TestConfig, argc, argv)
+            + QTest::qExec(new TestText, argc, argv)
             ;
 
     if (allTestsResult == 0)
