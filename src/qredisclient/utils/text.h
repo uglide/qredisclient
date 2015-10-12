@@ -4,3 +4,5 @@
 #include <QByteArray>
 
 QString printableString(const QByteArray& raw);
+
+bool isBinary(const QByteArray& raw);

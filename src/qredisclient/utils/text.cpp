@@ -6,7 +6,8 @@ QString printableString(const QByteArray &raw)
     QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     const QString text = codec->toUnicode(raw.constData(), raw.size(), &state);
 
-    if (state.invalidChars == 0)
+    if (state.invalidChars == 0
+            && !raw.contains('\x00'))
         return text;
 
     QByteArray escapedBinaryString;
@@ -23,4 +24,13 @@ QString printableString(const QByteArray &raw)
         }
     }
     return escapedBinaryString;
+}
+
+
+bool isBinary(const QByteArray &raw)
+{
+    QTextCodec::ConverterState state;
+    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
+    const QString text = codec->toUnicode(raw.constData(), raw.size(), &state);       
+    return state.invalidChars != 0 || raw.contains('\x00');
 }
