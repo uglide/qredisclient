@@ -38,7 +38,7 @@ QList<QByteArray> RedisClient::Command::splitCommandString(const QString &rawCom
     QList<QByteArray> parts;
     int i = 0;
     bool inQuote = false;
-    QString part = QString();
+    QByteArray part;
     QSet<QChar> delimiters;
     delimiters << QChar('"') << QChar('\'');
     QChar currentDelimiter = '\0';
@@ -50,26 +50,26 @@ QList<QByteArray> RedisClient::Command::splitCommandString(const QString &rawCom
         if(QChar(command.at(i)).isSpace() && !inQuote)
         {
             if (part.length() > 0)
-                parts.append(part.toUtf8());
-            part = QString();
+                parts.append(part);
+            part = QByteArray();
         }
         else if (delimiters.contains(command.at(i))
                  && (!inQuote || currentDelimiter == command.at(i)))
         {
-            if (i > 0 && command.at(i-1) == QChar('\\')) {
+            if (i > 0 && command.at(i-1) == '\\') {
                 part.remove(part.size()-1, 1);
                 part.append(command.at(i++));
                 continue;
             }
 
             if (inQuote) {
-                parts.append(part.toUtf8());
+                parts.append(part);
                 currentDelimiter = '\0';
             } else {
                 currentDelimiter = command.at(i);
             }
 
-            part = QString();
+            part = QByteArray();
             inQuote = !inQuote;
         }
         else
@@ -79,7 +79,7 @@ QList<QByteArray> RedisClient::Command::splitCommandString(const QString &rawCom
         ++i;
     }
     if (parts.length() < 1 || part.length() > 0)
-        parts.append(part.toUtf8());
+        parts.append(part);
     return parts;
 }
 

@@ -51,9 +51,10 @@ bool isBinary(const QByteArray &raw)
 
 QByteArray printableStringToBinary(const QString &str)
 {
+    QByteArray utfData = str.toUtf8();
     QByteArray processedString;
 
-    ushort quoteStarted = false;
+    bool quoteStarted = false;
     bool xFound = false;
     QByteArray hexBuff;
 
@@ -62,13 +63,13 @@ QByteArray printableStringToBinary(const QString &str)
         hexBuff.clear();
     };
 
-    for (QString::const_iterator i=str.constBegin(); i != str.constEnd(); ++i)
+    for (QByteArray::const_iterator i=utfData.constBegin(); i != utfData.constEnd(); ++i)
     {
         if (quoteStarted) {
 
             if (xFound) {
                 if (('0' <= *i && *i <= '9')
-                        || ('a' <= i->toLower() && i->toLower() <= 'f')) {
+                        || ('a' <= QChar(*i).toLower() && QChar(*i).toLower() <= 'f')) {
 
                     hexBuff.append(*i);
 
@@ -100,6 +101,9 @@ QByteArray printableStringToBinary(const QString &str)
             processedString.append(*i);
         }
     }
+
+    // Remove unicode headers
+    processedString.replace("\xEF\xBE", QByteArray());
 
     return processedString;
 }
