@@ -1,6 +1,7 @@
 #include "command.h"
 #include <QSet>
 #include "qredisclient/utils/compat.h"
+#include "qredisclient/utils/text.h"
 
 
 RedisClient::Command::Command()
@@ -32,7 +33,7 @@ RedisClient::Command &RedisClient::Command::append(const QByteArray &part)
     return *this;
 }
 
-QList<QByteArray> RedisClient::Command::splitCommandString(const QString &command)
+QList<QByteArray> RedisClient::Command::splitCommandString(const QString &rawCommand)
 {
     QList<QByteArray> parts;
     int i = 0;
@@ -42,9 +43,11 @@ QList<QByteArray> RedisClient::Command::splitCommandString(const QString &comman
     delimiters << QChar('"') << QChar('\'');
     QChar currentDelimiter = '\0';
 
+    QByteArray command = printableStringToBinary(rawCommand);
+
     while (i < command.length())
     {
-        if(command.at(i).isSpace() && !inQuote)
+        if(QChar(command.at(i)).isSpace() && !inQuote)
         {
             if (part.length() > 0)
                 parts.append(part.toUtf8());
@@ -77,7 +80,6 @@ QList<QByteArray> RedisClient::Command::splitCommandString(const QString &comman
     }
     if (parts.length() < 1 || part.length() > 0)
         parts.append(part.toUtf8());
-
     return parts;
 }
 

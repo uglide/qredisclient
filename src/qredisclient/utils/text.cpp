@@ -1,14 +1,29 @@
 #include "text.h"
 #include <functional>
 
-QString printableString(const QByteArray &raw)
+bool byteArrayToValidUnicode(const QByteArray &raw, QString* result = nullptr)
 {
     QTextCodec::ConverterState state;
     QTextCodec *codec = QTextCodec::codecForName("UTF-8");
     const QString text = codec->toUnicode(raw.constData(), raw.size(), &state);
 
-    if (state.invalidChars == 0
-            && !raw.contains('\x00'))
+    if (state.invalidChars == 0) {
+
+        foreach (QChar c, text) {
+            if (!c.isPrint()) return false;
+        }
+
+        if (result) *result = text;
+        return true;
+    }
+    return false;
+}
+
+QString printableString(const QByteArray &raw)
+{
+    QString text;
+
+    if (byteArrayToValidUnicode(raw, &text))
         return text;
 
     QByteArray escapedBinaryString;
@@ -30,10 +45,7 @@ QString printableString(const QByteArray &raw)
 
 bool isBinary(const QByteArray &raw)
 {
-    QTextCodec::ConverterState state;
-    QTextCodec *codec = QTextCodec::codecForName("UTF-8");
-    const QString text = codec->toUnicode(raw.constData(), raw.size(), &state);       
-    return state.invalidChars != 0 || raw.contains('\x00');
+    return !byteArrayToValidUnicode(raw);
 }
 
 

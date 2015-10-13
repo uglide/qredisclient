@@ -27,3 +27,18 @@ void TestText::testPrintableStringToBinary()
     //then
     QCOMPARE(actualResult, validResult);
 }
+
+void TestText::testPrintableString()
+{
+    //given
+    QByteArray testData;
+    testData.append('\x01');
+    testData.append('\x02');
+    testData.append('\x03');
+
+    //when
+    QString actualResult = printableString(testData);
+
+    //then
+    QCOMPARE(actualResult, QString("\\x01\\x02\\x03"));
+}

@@ -9,6 +9,7 @@ class TestText : public QObject
 
 private slots:
     void testPrintableStringToBinary();
+    void testPrintableString();
 
 };
 
