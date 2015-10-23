@@ -28,7 +28,7 @@ void RedisClient::AbstractTransporter::init()
 
     m_loopTimer = QSharedPointer<QTimer>(new QTimer);
     m_loopTimer->setSingleShot(false);
-    m_loopTimer->setInterval(0);
+    m_loopTimer->setInterval(1000);
     connect(m_loopTimer.data(), SIGNAL(timeout()), this, SLOT(processCommandQueue()));
     connect(m_connection, &Connection::authOk, this, &AbstractTransporter::runProcessingLoop);
 
