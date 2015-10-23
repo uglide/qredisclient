@@ -10,6 +10,7 @@ bool byteArrayToValidUnicode(const QByteArray &raw, QString* result = nullptr)
     if (state.invalidChars == 0) {
 
         foreach (QChar c, text) {
+            if (c == '\r' || c == '\t' || c == '\n') continue;
             if (!c.isPrint()) return false;
         }
 
