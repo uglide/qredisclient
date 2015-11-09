@@ -1,7 +1,7 @@
 #include "scancommand.h"
 
 
-void RedisClient::ScanCommand::setCursor(int cursor)
+void RedisClient::ScanCommand::setCursor(long long cursor)
 {
     if (cursor <= 0)
         return;

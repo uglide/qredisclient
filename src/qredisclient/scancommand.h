@@ -9,7 +9,7 @@ public:
     ScanCommand(const QList<QByteArray>& cmd, int db) : Command(cmd, db) {}
     ScanCommand(const QList<QByteArray>& cmd) : Command(cmd) {}
 
-    void setCursor(int cursor);
+    void setCursor(long long cursor);
 
     bool isValidScanCommand();
 

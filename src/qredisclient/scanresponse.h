@@ -8,7 +8,7 @@ class ScanResponse : public Response
 public:
     ScanResponse(const QByteArray &resp): Response(resp) {}
 
-    int getCursor();
+    long long getCursor();
     QVariantList getCollection();
 
     static bool isValidScanResponse(Response &r);

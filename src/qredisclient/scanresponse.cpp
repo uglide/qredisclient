@@ -1,6 +1,6 @@
 #include "scanresponse.h"
 
-int RedisClient::ScanResponse::getCursor()
+long long RedisClient::ScanResponse::getCursor()
 {    
     if (m_result.isNull()) parse();
 
@@ -9,7 +9,7 @@ int RedisClient::ScanResponse::getCursor()
 
     QVariantList result = m_result->toList();
 
-    return result.at(0).toInt();
+    return result.at(0).toLongLong();
 }
 
 QVariantList RedisClient::ScanResponse::getCollection()
