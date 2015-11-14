@@ -279,7 +279,7 @@ void TestConnection::testParseServerInfo()
 {
     //given
     QString testInfo("# Server\n"
-                     "redis_version:2.9.999\n"
+                     "redis_version:999.999.999\n"
                      "redis_git_sha1:3bf72d0d\n"
                      "redis_git_dirty:0\n"
                      "redis_build_id:69b45658ca5a9e2d\n"
@@ -301,7 +301,7 @@ void TestConnection::testParseServerInfo()
     ServerInfo actualResult = ServerInfo::fromString(testInfo);
 
     //then
-    QCOMPARE(actualResult.version, 2.9);
+    QCOMPARE(actualResult.version, 999.999);
     QCOMPARE(actualResult.clusterMode, true);
 }
 
