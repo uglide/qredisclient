@@ -278,7 +278,7 @@ QByteArray RedisClient::Response::getChannel() const
 }
 
 // TBD: add pretty printing
-QString RedisClient::Response::valueToHumanReadString(QVariant& value)
+QString RedisClient::Response::valueToHumanReadString(const QVariant& value)
 {
     if (value.isNull()) 
     {
