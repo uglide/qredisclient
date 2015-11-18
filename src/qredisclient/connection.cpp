@@ -146,9 +146,10 @@ void RedisClient::Connection::runCommand(Command &cmd)
         });
     }
 
-    if (cmd.getOwner())
+    if (cmd.getOwner() && cmd.getOwner() != this)
         QObject::connect(cmd.getOwner(), SIGNAL(destroyed(QObject *)),
-                m_transporter.data(), SLOT(cancelCommands(QObject *)));
+                m_transporter.data(), SLOT(cancelCommands(QObject *)),
+                static_cast<Qt::ConnectionType>(Qt::QueuedConnection | Qt::UniqueConnection));
 
     // wait for signal from transporter
     SignalWaiter waiter(m_config.executeTimeout());
