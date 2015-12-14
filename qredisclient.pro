@@ -5,6 +5,10 @@ TARGET = qredisclient
 
 include($$PWD/qredisclient.pri)
 
+isEmpty(DESTDIR) {
+    DESTDIR = $$PWD
+}
+
 OBJECTS_DIR = $$DESTDIR/obj
 MOC_DIR = $$DESTDIR/obj
 RCC_DIR = $$DESTDIR/obj
