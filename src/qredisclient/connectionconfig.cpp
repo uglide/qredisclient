@@ -48,6 +48,16 @@ uint RedisClient::ConnectionConfig::port() const
     return param<uint>("port");
 }
 
+void RedisClient::ConnectionConfig::setName(QString name)
+{
+    setParam<QString>("name", name);
+}
+
+void RedisClient::ConnectionConfig::setAuth(QString auth)
+{
+    setParam<QString>("auth", auth);
+}
+
 void RedisClient::ConnectionConfig::setHost(QString host)
 {
     setParam<QString>("host", host);
@@ -66,6 +76,16 @@ uint RedisClient::ConnectionConfig::executeTimeout() const
 uint RedisClient::ConnectionConfig::connectionTimeout() const
 {
     return param<uint>("timeout_connect");
+}
+
+void RedisClient::ConnectionConfig::setExecutionTimeout(uint timeout)
+{
+    setParam<uint>("timeout_execute", timeout);
+}
+
+void RedisClient::ConnectionConfig::setConnectionTimeout(uint timeout)
+{
+    setParam<uint>("timeout_connect", timeout);
 }
 
 void RedisClient::ConnectionConfig::setTimeouts(uint connectionTimeout, uint commandExecutionTimeout)
@@ -96,6 +116,21 @@ QString RedisClient::ConnectionConfig::sslPrivateKeyPath() const
 QString RedisClient::ConnectionConfig::sslLocalCertPath() const
 {
     return getValidPathFromParameter("ssl_local_cert_path");
+}
+
+void RedisClient::ConnectionConfig::setSslCaCertPath(QString path)
+{
+    setParam<QString>("ssl_ca_cert_path", path);
+}
+
+void RedisClient::ConnectionConfig::setSslPrivateKeyPath(QString path)
+{
+    setParam<QString>("ssl_private_key_path", path);
+}
+
+void RedisClient::ConnectionConfig::setSslLocalCertPath(QString path)
+{
+    setParam<QString>("ssl_local_cert_path", path);
 }
 
 void RedisClient::ConnectionConfig::setSslSettigns(QString sslCaCertPath, QString sslPrivateKeyPath, QString sslLocalCertPath)
@@ -194,6 +229,31 @@ QString RedisClient::ConnectionConfig::getSshPrivateKey() const
 QString RedisClient::ConnectionConfig::getSshPrivateKeyPath() const
 {
     return param<QString>("ssh_private_key_path");
+}
+
+void RedisClient::ConnectionConfig::setSshPassword(QString pass)
+{
+    m_parameters.insert("ssh_password", pass);
+}
+
+void RedisClient::ConnectionConfig::setSshHost(QString host)
+{
+    m_parameters.insert("ssh_host", host);
+}
+
+void RedisClient::ConnectionConfig::setSshPrivateKeyPath(QString path)
+{
+    m_parameters.insert("ssh_private_key_path", path);
+}
+
+void RedisClient::ConnectionConfig::setSshUser(QString user)
+{
+    m_parameters.insert("ssh_user", user);
+}
+
+void RedisClient::ConnectionConfig::setSshPort(uint port)
+{
+    m_parameters.insert("ssh_port", port);
 }
 
 RedisClient::ConnectionConfig RedisClient::ConnectionConfig::fromJsonObject(const QJsonObject &config)

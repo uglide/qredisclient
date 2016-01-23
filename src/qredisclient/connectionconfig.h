@@ -37,6 +37,8 @@ public:
     QString auth() const;
     uint port() const;
 
+    void setName(QString name);
+    void setAuth(QString auth);
     void setHost(QString host);
     void setPort(uint port);
 
@@ -49,6 +51,9 @@ public:
      */
     uint executeTimeout() const;
     uint connectionTimeout() const;
+
+    void setExecutionTimeout(uint timeout);
+    void setConnectionTimeout(uint timeout);
     void setTimeouts(uint connectionTimeout, uint commandExecutionTimeout);
 
     /*
@@ -60,6 +65,10 @@ public:
     QString sslCaCertPath() const;
     QString sslPrivateKeyPath() const;
     QString sslLocalCertPath() const;
+
+    void setSslCaCertPath(QString path);
+    void setSslPrivateKeyPath(QString path);
+    void setSslLocalCertPath(QString path);
     void setSslSettigns(QString sslCaCertPath,
                         QString sslPrivateKeyPath = "",
                         QString sslLocalCertPath = "");
@@ -80,6 +89,12 @@ public:
      */
     QString getSshPrivateKey() const;
     QString getSshPrivateKeyPath() const;
+
+    void setSshPassword(QString pass);
+    void setSshHost(QString host);
+    void setSshPrivateKeyPath(QString path);
+    void setSshUser(QString user);
+    void setSshPort(uint port);
 
     /**
      * @brief setSshTunnelSettings - Set SSH settings
