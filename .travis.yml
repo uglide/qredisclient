@@ -2,7 +2,7 @@ language: cpp
 compiler:
   - gcc
 env:
-  - RDM_QT_VERSION=55
+  - RDM_QT_VERSION=551
   - RDM_QT_VERSION=542
 before_install:
 - sudo apt-key update
