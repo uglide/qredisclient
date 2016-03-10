@@ -32,7 +32,7 @@ QString printableString(const QByteArray &raw)
                            'A', 'B', 'C', 'D', 'E', 'F'};
 
     foreach (char i, raw) {
-        if (isprint(i)) {
+        if (isprint((unsigned char)i)) {
             escapedBinaryString.append(i);
         } else {
             escapedBinaryString.append("\\x");
