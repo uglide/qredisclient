@@ -8,12 +8,9 @@ SOURCES += $$PWD/hiredis/read.c \
            $$PWD/hiredis/sds.c
 
 
-# SSH Transporter deps
-INCLUDEPATH += $$PWD/libssh2/include
-DEPENDPATH += $$PWD/libssh2/include
-
 unix:mac {
-    LIBS += -L/usr/local/Cellar/libssh2/1.6.0/lib/
+    INCLUDEPATH += /usr/local/Cellar/libssh2/1.7.0/include/
+    LIBS += -L/usr/local/Cellar/libssh2/1.7.0/lib/
 }
 
 win32-msvc* {
@@ -23,6 +20,8 @@ win32-msvc* {
     } else {
         error("Your msvc version is not suppoted. qredisclient requires msvc2015+")
     }
+
+    INCLUDEPATH += $$PWD/windows/rmt_libssh2.1.6.0.2/build/native/include/
 
     CONFIG(release, debug|release) {
         WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static/zlibstat.lib
