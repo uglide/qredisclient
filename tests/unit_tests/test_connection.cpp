@@ -161,11 +161,10 @@ void TestConnection::checkTimeout()
     //when
     QVERIFY(connection.connect());
 
-    qDebug() << "Wait 1/5"; wait(1000 * 60);
-    qDebug() << "Wait 2/5"; wait(1000 * 60);
-    qDebug() << "Wait 3/5"; wait(1000 * 60);
-    qDebug() << "Wait 4/5"; wait(1000 * 60);
-    qDebug() << "Wait 5/5"; wait(1000 * 60);
+    for (int c=0; c < 60; c++) {
+        qDebug() << "Wait " << (c + 1) << "/60"; 
+        wait(1000 * 10);
+    }
 
     Response actualCommandResult = connection.commandSync("ping");
 
