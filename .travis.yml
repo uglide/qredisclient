@@ -7,8 +7,6 @@ env:
   - RDM_QT_VERSION=56
   - RDM_QT_VERSION=551
   - RDM_QT_VERSION=542
-  - RDM_QT_VERSION=532
-  - RDM_QT_VERSION=521
 before_install:
 - sudo apt-key update
 - sudo apt-get update
