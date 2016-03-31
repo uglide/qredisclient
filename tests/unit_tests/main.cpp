@@ -21,9 +21,9 @@ int main(int argc, char *argv[])
             + QTest::qExec(new TestCommand, argc, argv)
             + QTest::qExec(new TestSsh, argc, argv)
             + QTest::qExec(new TestResponse, argc, argv)
-            + QTest::qExec(new TestConnection, argc, argv)
             + QTest::qExec(new TestConfig, argc, argv)
             + QTest::qExec(new TestText, argc, argv)
+            + QTest::qExec(new TestConnection, argc, argv)
             ;
 
     if (allTestsResult == 0)
