@@ -9,6 +9,7 @@ install:
 - qmake -v
 - nuget install redis-64 -excludeversion
 - dir
+- dir redis-64
 - redis-64\redis-server.exe --service-install
 - redis-64\redis-server.exe --service-start
 build_script:
