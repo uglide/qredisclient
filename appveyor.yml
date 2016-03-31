@@ -8,6 +8,7 @@ install:
 - nuget install -Version 1.6.0.2 -OutputDirectory ./3rdparty/windows rmt_libssh2
 - qmake -v
 - nuget install redis-64 -excludeversion
+- dir
 - redis-64\redis-server.exe --service-install
 - redis-64\redis-server.exe --service-start
 build_script:
