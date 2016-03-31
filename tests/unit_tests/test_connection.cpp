@@ -161,8 +161,10 @@ void TestConnection::checkTimeout()
     //when
     QVERIFY(connection.connect());
 
-    for (int c=0; c < 60; c++) {
-        qDebug() << "Wait " << (c + 1) << "/60"; 
+    int totalRuns = 20;
+
+    for (int c=0; c < totalRuns; c++) {
+        qDebug() << "Wait " << (c + 1) << "/" << totalRuns; 
         wait(1000 * 10);
     }
 
