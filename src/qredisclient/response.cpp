@@ -97,8 +97,10 @@ QVariant* convertUnsafeArray(QVariant* arr)
             result.append(*convertUnsafeArray(val[index]));
         } else {
             result.append(*val[index]);
+            delete val[index];
         }
     }
+    delete arr;
     return (new QVariant(result));
 }
 
