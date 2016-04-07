@@ -14,10 +14,10 @@ Asynchronous Qt-based Redis client with SSL and SSH tunnelling support. This cli
 
 int main(int argc, char *argv[])
 {
-  # Init qredisclient
+  // Init qredisclient
   initRedisClient();
   
-  # Create connection to local redis
+  // Create connection to local redis
   RedisClient::ConnectionConfig config("127.0.0.1");
   RedisClient::Connection connection(config);
   
