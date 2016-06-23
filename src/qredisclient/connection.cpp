@@ -128,23 +128,7 @@ void RedisClient::Connection::runCommand(Command &cmd)
         throw Exception("Command is not valid");
 
     if (!isConnected())
-        throw Exception("Try run command in not connected state");
-
-    if (cmd.hasDbIndex() && m_dbNumber != cmd.getDbIndex())
-        commandSync("SELECT", QString::number(cmd.getDbIndex()));
-
-    if (cmd.isSelectCommand()) {
-        auto originalCallback = cmd.getCallBack();
-        int dbIndex = cmd.getPartAsString(1).toInt();
-
-        cmd.setCallBack(cmd.getOwner(), [originalCallback, dbIndex, this](Response r, QString e) {
-            if (r.isOkMessage()) {
-                m_dbNumber = dbIndex;
-                qDebug() << "DB was selected:" << dbIndex;
-            }
-            return originalCallback(r, e);
-        });
-    }
+        throw Exception("Try run command in not connected state");   
 
     if (cmd.getOwner() && cmd.getOwner() != this)
         QObject::connect(cmd.getOwner(), SIGNAL(destroyed(QObject *)),
@@ -255,6 +239,14 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
     });
 
     runCommand(*cmd);
+}
+
+void RedisClient::Connection::changeCurrentDbNumber(int db)
+{
+    m_dbNumberMutex.lock();
+    m_dbNumber = db;
+    qDebug() << "DB was selected:" << db;
+    m_dbNumberMutex.unlock();
 }
 
 RedisClient::Response RedisClient::Connection::commandSync(const Command& command)

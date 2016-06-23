@@ -5,6 +5,7 @@
 #include <QSharedPointer>
 #include <QEventLoop>
 #include <QTimer>
+#include <QMutex>
 #include "connectionconfig.h"
 #include "exception.h"
 #include "command.h"
@@ -35,6 +36,9 @@ class Connection : public QObject
 {
     Q_OBJECT
     ADD_EXCEPTION
+
+    friend class AbstractTransporter;
+
 public:
     enum class Mode { Normal, PubSub, Cluster };
     class InvalidModeException : public Connection::Exception {};
@@ -187,6 +191,8 @@ protected:
                             CollectionCallback callback,
                             QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>());
 
+    void changeCurrentDbNumber(int db);
+
 protected slots:
     void auth();
 
@@ -198,5 +204,6 @@ protected:
     int m_dbNumber;
     ServerInfo m_serverInfo;
     Mode m_currentMode;
+    QMutex m_dbNumberMutex;
 };
 }

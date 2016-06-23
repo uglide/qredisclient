@@ -38,6 +38,16 @@ void RedisClient::AbstractTransporter::init()
 
 void RedisClient::AbstractTransporter::addCommand(Command cmd)
 {
+    if (cmd.hasDbIndex() && m_connection->m_dbNumber != cmd.getDbIndex()) {
+        QList<QByteArray> selectCmdRaw = {"SELECT", QString::number(cmd.getDbIndex()).toLatin1()};
+        Command selectCmd(selectCmdRaw);
+
+        if (cmd.isHiPriorityCommand())
+            m_commands.prepend(selectCmd);
+        else
+            m_commands.enqueue(selectCmd);
+    }
+
     if (cmd.isHiPriorityCommand())
         m_commands.prepend(cmd);
     else
@@ -109,6 +119,10 @@ void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response&
     if (m_runningCommand->cmd.isUnSubscriptionCommand()) {
         // TODO: remove channels from m_subscriptions
         // TODO: send error to callbacks
+    }
+
+    if (m_runningCommand->cmd.isSelectCommand() && response.isOkMessage()) {
+        m_connection->changeCurrentDbNumber(m_runningCommand->cmd.getPartAsString(1).toInt());
     }
 
     if (m_runningCommand->emitter) {
@@ -231,6 +245,8 @@ void RedisClient::AbstractTransporter::runCommand(const RedisClient::Command &co
         reconnect();
         return;
     }
+
+    qDebug() << "Run command:" << command.getRawString() << " in db " << m_connection->m_dbNumber;
 
     emit logEvent(QString("%1 > [runCommand] %2")
                   .arg(m_connection->getConfig().name())
