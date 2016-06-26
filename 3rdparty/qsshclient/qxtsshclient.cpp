@@ -572,6 +572,7 @@ void QxtSshClientPrivate::d_reset(){
 
     //buildup
     d_session=libssh2_session_init_ex(NULL,NULL,NULL,reinterpret_cast<void*>(this));
+    libssh2_session_flag(d_session, LIBSSH2_FLAG_COMPRESS, 1);
     libssh2_session_callback_set(d_session,LIBSSH2_CALLBACK_RECV,reinterpret_cast<void*>(&qxt_p_libssh_recv));
     libssh2_session_callback_set(d_session,LIBSSH2_CALLBACK_SEND,reinterpret_cast<void*>(&qxt_p_libssh_send));
     Q_ASSERT(d_session);
