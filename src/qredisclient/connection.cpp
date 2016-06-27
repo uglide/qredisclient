@@ -144,6 +144,13 @@ void RedisClient::Connection::runCommand(Command &cmd)
     waiter.wait();
 }
 
+bool RedisClient::Connection::waitForIdle(int timeout)
+{
+    SignalWaiter waiter(timeout);
+    waiter.addSuccessSignal(m_transporter.data(), &AbstractTransporter::queueIsEmpty);
+    return waiter.wait();
+}
+
 void RedisClient::Connection::retrieveCollection(QSharedPointer<RedisClient::ScanCommand> cmd,
                                                  Connection::CollectionCallback callback)
 {
@@ -243,10 +250,13 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
 
 void RedisClient::Connection::changeCurrentDbNumber(int db)
 {
-    m_dbNumberMutex.lock();
-    m_dbNumber = db;
-    qDebug() << "DB was selected:" << db;
-    m_dbNumberMutex.unlock();
+    if (m_dbNumberMutex.tryLock(5000)) {
+        m_dbNumber = db;
+        qDebug() << "DB was selected:" << db;
+        m_dbNumberMutex.unlock();
+    } else {
+        qWarning() << "Cannot lock db number mutex!";
+    }
 }
 
 RedisClient::Response RedisClient::Connection::commandSync(const Command& command)
@@ -261,8 +271,9 @@ RedisClient::Response RedisClient::Connection::commandSync(const Command& comman
     }
 
     RedisClient::Response r = syncObject.waitForResult(m_config.executeTimeout());
-    if (r.isEmpty())
+    if (r.isEmpty()) {
         throw Exception("Execution timeout");
+    }
     return r;
 }
 
@@ -279,7 +290,7 @@ void RedisClient::Connection::auth()
 
         if (testResult.toRawString() != "+PONG\r\n") {
             emit error("AUTH ERROR");
-            emit authError("Redis server require password or password invalid");
+            emit authError("Redis server requires password or password is not valid");
             return;
         }
 

@@ -112,7 +112,9 @@ bool RedisClient::Response::parse()
     QVariant* reply = nullptr;
 
     if (redisReaderGetReply(m_redisReader.data(), (void **)&reply) == REDIS_ERR) {
-        qDebug() << "hiredis cannot parse buffer";
+        qDebug() << "hiredis cannot parse buffer" << m_redisReader.data()->err;
+        qDebug() << "current buffer:" << QByteArray::fromRawData(m_redisReader.data()->buf, m_redisReader.data()->len);
+        qDebug() << "all buffer:" << m_responseSource;
         return false;
     }
 
@@ -133,7 +135,10 @@ void RedisClient::Response::feed(const QByteArray& buffer)
     m_responseSource.append(buffer);
 
     if (redisReaderFeed(m_redisReader.data(), buffer.constData(), buffer.size()) == REDIS_ERR) {
-        qDebug() << "hiredis cannot feed buffer";
+        qDebug() << "hiredis cannot feed buffer, error:" << m_redisReader.data()->err;
+        qDebug() << "current buffer:" << QByteArray::fromRawData(m_redisReader.data()->buf, m_redisReader.data()->len);
+        qDebug() << "buffer part:" << buffer;
+        qDebug() << "all buffer:" << m_responseSource;
     }
 }
 
@@ -212,7 +217,7 @@ RedisClient::Response::Type RedisClient::Response::getResponseType(const char ty
 
 bool RedisClient::Response::isValid()
 {
-    return m_result || (m_responseSource.endsWith("\r\n") && parse());
+    return m_result || parse();
 }
 
 bool RedisClient::Response::isMessage() const

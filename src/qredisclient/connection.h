@@ -165,6 +165,13 @@ public:
      */
     virtual void runCommand(Command &cmd);
 
+
+    /**
+     * @brief waitForIdle - Wait until all commands in queue will be processed
+     * @param timeout
+     */
+    bool waitForIdle(int timeout);
+
     /*
      * Low level functions for modification
      * commands execution.

@@ -4,7 +4,7 @@
 #include <QDebug>
 
 RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *connection)
-    : m_runningCommand(nullptr), m_connection(connection)
+    : m_connection(connection)
 {
     //connect signals & slots between connection & transporter
     connect(connection, SIGNAL(addCommandToWorker(Command)), this, SLOT(addCommand(Command)));
@@ -15,16 +15,13 @@ RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *c
 RedisClient::AbstractTransporter::~AbstractTransporter()
 {
     disconnectFromHost();
+    m_loopTimer.clear();
 }
 
 void RedisClient::AbstractTransporter::init()
 {
     if (isInitialized())
         return;
-
-    m_executionTimer = QSharedPointer<QTimer>(new QTimer);
-    m_executionTimer->setSingleShot(true);
-    connect(m_executionTimer.data(), SIGNAL(timeout()), this, SLOT(executionTimeout()));
 
     m_loopTimer = QSharedPointer<QTimer>(new QTimer);
     m_loopTimer->setSingleShot(false);
@@ -38,16 +35,6 @@ void RedisClient::AbstractTransporter::init()
 
 void RedisClient::AbstractTransporter::addCommand(Command cmd)
 {
-    if (cmd.hasDbIndex() && m_connection->m_dbNumber != cmd.getDbIndex()) {
-        QList<QByteArray> selectCmdRaw = {"SELECT", QString::number(cmd.getDbIndex()).toLatin1()};
-        Command selectCmd(selectCmdRaw);
-
-        if (cmd.isHiPriorityCommand())
-            m_commands.prepend(selectCmd);
-        else
-            m_commands.enqueue(selectCmd);
-    }
-
     if (cmd.isHiPriorityCommand())
         m_commands.prepend(cmd);
     else
@@ -60,11 +47,12 @@ void RedisClient::AbstractTransporter::addCommand(Command cmd)
 
 void RedisClient::AbstractTransporter::cancelCommands(QObject *owner)
 {    
-    if (m_runningCommand && m_runningCommand->cmd.getOwner() == owner) {
-        m_runningCommand.clear();
-        emit logEvent("Running command was canceled.");
-    }    
+    if (!owner)
+        return;
 
+    reAddRunningCommandToQueue(owner);
+
+    // Remove subscriptions
     Subscriptions::iterator i = m_subscriptions.begin();
     while (i != m_subscriptions.constEnd()) {
         if (i.value()->owner == owner) {
@@ -78,6 +66,7 @@ void RedisClient::AbstractTransporter::cancelCommands(QObject *owner)
     if (m_commands.size() == 0)
         return;
 
+    // Cancel command in queue
     for (auto curr = m_commands.begin(); curr != m_commands.end();) {
         if (curr->getOwner() == owner) {
             curr = m_commands.erase(curr);
@@ -90,9 +79,6 @@ void RedisClient::AbstractTransporter::cancelCommands(QObject *owner)
 
 void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response& response)
 {
-    if (m_executionTimer)
-        m_executionTimer->stop();
-
     logResponse(response);
 
     if (response.isMessage()) {
@@ -104,44 +90,92 @@ void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response&
         return;
     }
 
-    if (!m_runningCommand) {
-        qDebug() << "Response recieved but command is not running";
+    if (m_runningCommands.size() == 0) {
+        qDebug() << "Response recieved but no commands are running";
         return;
     }
+
+    auto runningCommand = m_runningCommands.dequeue();
 
     // Reconnect to different server in cluster and reissue current
     // command if needed
     if (m_connection->mode() == Connection::Mode::Cluster
             && (response.isAskRedirect() || response.isMovedRedirect())) {
-        return processClusterRedirect(response);
+        return processClusterRedirect(runningCommand, response);
     }
 
-    if (m_runningCommand->cmd.isUnSubscriptionCommand()) {
+    if (runningCommand->cmd.isUnSubscriptionCommand()) {
         // TODO: remove channels from m_subscriptions
         // TODO: send error to callbacks
     }
 
-    if (m_runningCommand->cmd.isSelectCommand() && response.isOkMessage()) {
-        m_connection->changeCurrentDbNumber(m_runningCommand->cmd.getPartAsString(1).toInt());
+    if (runningCommand->cmd.isSelectCommand() && response.isOkMessage()) {
+        m_connection->changeCurrentDbNumber(runningCommand->cmd.getPartAsString(1).toInt());
     }
 
-    if (m_runningCommand->emitter) {
-       m_runningCommand->emitter->sendResponse(response, QString());
+    if (runningCommand->emitter) {
+       runningCommand->emitter->sendResponse(response, QString());
 
-       if (m_runningCommand->cmd.isSubscriptionCommand())
-            addSubscriptionsFromRunningCommand();
+       if (runningCommand->cmd.isSubscriptionCommand())
+            addSubscriptionsFromRunningCommand(runningCommand);
     }
-    m_runningCommand.clear();
+    runningCommand.clear();
+}
+
+void RedisClient::AbstractTransporter::reAddRunningCommandToQueue(QObject *ignoreOwner)
+{
+    for (auto curr = m_runningCommands.end(); curr != m_runningCommands.begin();) {
+        --curr;
+
+        auto rCmd = *curr;
+        if (ignoreOwner == nullptr || rCmd->cmd.getOwner() != ignoreOwner) {
+            m_commands.prepend(rCmd->cmd);
+            qDebug() << "Running command was re-added to queue";
+            emit logEvent("Running command was re-added to queue.");
+        }
+
+        curr = m_runningCommands.erase(curr);        
+    }
 }
 
 void RedisClient::AbstractTransporter::processCommandQueue()
 {    
-    if (m_runningCommand || m_commands.isEmpty()) {        
+    if (m_commands.isEmpty()) {
+        emit queueIsEmpty();
         return;
     }
 
-    auto command = m_commands.dequeue();
-    runCommand(command);
+    // Do not allow commands execution if we selecting db now
+    for (auto curr = m_runningCommands.begin(); curr != m_runningCommands.end();) {
+        auto rCmd = *curr;
+
+        if (rCmd->cmd.isSelectCommand()) {
+            qDebug() << "Block commands. Wait for SELECT finish.";
+            return;
+        }
+
+        ++curr;
+    }    
+
+    if (m_runningCommands.size() > 0 && m_commands.head().isSelectCommand()) {
+        qDebug() << "Wait for regular commands before db SELECT";
+        return;
+    }
+
+    if (m_commands.head().hasDbIndex() && m_connection->m_dbNumber != m_commands.head().getDbIndex()) {
+        if (m_runningCommands.size() > 0) {
+            qDebug() << "Wait for regular commands before db SELECT";
+            return;
+        }
+
+        QList<QByteArray> selectCmdRaw = {"SELECT", QString::number(m_commands.head().getDbIndex()).toLatin1()};
+        Command selectCmd(selectCmdRaw);
+        qDebug() << "SELECT proper DB for running command.";
+        runCommand(selectCmd);
+        return;
+    }
+
+    runCommand(m_commands.dequeue());
 }
 
 void RedisClient::AbstractTransporter::runProcessingLoop()
@@ -151,9 +185,6 @@ void RedisClient::AbstractTransporter::runProcessingLoop()
 
 void RedisClient::AbstractTransporter::logResponse(const RedisClient::Response& response)
 {
-    if (!m_runningCommand)
-        return;
-
     QString result;
 
     if (response.getType() == RedisClient::Response::Type::Status
@@ -165,15 +196,15 @@ void RedisClient::AbstractTransporter::logResponse(const RedisClient::Response& 
         result = QString("Array");
     }
 
-    emit logEvent(QString("%1 > [runCommand] %2 -> response received : %3")
-                  .arg(m_connection->getConfig().name())
-                  .arg(printableString(m_runningCommand->cmd.getRawString()))
+    emit logEvent(QString("%1 > Response received : %2")
+                  .arg(m_connection->getConfig().name())                  
                   .arg(result));
 }
 
-void RedisClient::AbstractTransporter::processClusterRedirect(const RedisClient::Response &response)
+void RedisClient::AbstractTransporter::processClusterRedirect(QSharedPointer<RunningCommand> runningCommand,
+                                                              const RedisClient::Response &response)
 {
-    Q_ASSERT(m_runningCommand);
+    Q_ASSERT(runningCommand);
     qDebug() << "Cluster redirect";
 
     auto config = m_connection->getConfig();
@@ -181,28 +212,29 @@ void RedisClient::AbstractTransporter::processClusterRedirect(const RedisClient:
     config.setPort(response.getRedirectionPort());
     m_connection->setConnectionConfig(config);
 
-    m_commands.prepend(m_runningCommand->cmd);
-    m_runningCommand.clear();
+    m_commands.prepend(runningCommand->cmd);
+    runningCommand.clear();
 
     reconnect();
 }
 
-void RedisClient::AbstractTransporter::addSubscriptionsFromRunningCommand()
+void RedisClient::AbstractTransporter::addSubscriptionsFromRunningCommand(QSharedPointer<RunningCommand> runningCommand)
 {
-    Q_ASSERT(m_runningCommand);
+    Q_ASSERT(runningCommand);
 
-    if (!m_runningCommand->emitter)
+    if (!runningCommand->emitter)
         return;
 
-    QList<QByteArray> channels = m_runningCommand->cmd.getSplitedRepresentattion().mid(1);
+    QList<QByteArray> channels = runningCommand->cmd.getSplitedRepresentattion().mid(1);
 
     for (QByteArray channel : channels) {
-        m_subscriptions.insert(channel, m_runningCommand->emitter);
+        m_subscriptions.insert(channel, runningCommand->emitter);
     }
 }
 
 void RedisClient::AbstractTransporter::executionTimeout()
 {
+    qDebug() << "Command execution/download timeout";
     emit errorOccurred("Execution timeout");
 }
 
@@ -211,12 +243,9 @@ void RedisClient::AbstractTransporter::readyRead()
     if (!canReadFromSocket())
         return;
 
-    m_executionTimer->stop();
-
     m_response.appendToSource(readFromSocket());
 
     if (!m_response.isValid()) {
-        m_executionTimer->start(m_connection->getConfig().executeTimeout()); //restart execution timer
         return;
     }
 
@@ -233,6 +262,8 @@ void RedisClient::AbstractTransporter::readyRead()
     if (m_response.isValid())
         m_response.reset();
 
+    qDebug() << "Parsed responses count:" << responses.size();
+
     for (auto r: responses) {
         sendResponse(r);
     }
@@ -241,21 +272,28 @@ void RedisClient::AbstractTransporter::readyRead()
 void RedisClient::AbstractTransporter::runCommand(const RedisClient::Command &command)
 {    
     if (isSocketReconnectRequired()) {
+        qDebug() << "Cannot run command. Reconnect is required.";
         m_commands.enqueue(command);
         reconnect();
         return;
     }
 
-    qDebug() << "Run command:" << command.getRawString() << " in db " << m_connection->m_dbNumber;
+    qDebug() << "Run command:" << command.getRawString() << " in db "
+             << m_connection->m_dbNumber << " with timeout " << m_connection->getConfig().executeTimeout();
 
     emit logEvent(QString("%1 > [runCommand] %2")
                   .arg(m_connection->getConfig().name())
                   .arg(printableString(command.getRawString())));
 
-    m_response.reset();
-    m_runningCommand = QSharedPointer<RunningCommand>(new RunningCommand(command));
-    m_executionTimer->start(m_connection->getConfig().executeTimeout());
-    sendCommand(m_runningCommand->cmd.getByteRepresentation());
+    //m_response.reset();
+    auto runningCommand = QSharedPointer<RunningCommand>(new RunningCommand(command));
+    m_runningCommands.enqueue(runningCommand);
+
+    if (m_runningCommands.size() > 1) {
+        qDebug() << "Multiple commands running";
+    }
+
+    sendCommand(runningCommand->cmd.getByteRepresentation());
 }
 
 

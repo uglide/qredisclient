@@ -28,8 +28,8 @@ void RedisClient::DefaultTransporter::disconnectFromHost()
     if (m_socket.isNull())
         return;
 
-    m_executionTimer.clear();
-    m_loopTimer.clear();
+    m_loopTimer->stop();
+
     m_socket->abort();
     m_socket.clear();
 }
@@ -115,8 +115,9 @@ void RedisClient::DefaultTransporter::error(QAbstractSocket::SocketError error)
 {
     if (error == QAbstractSocket::UnknownSocketError
             && connectToHost()
-            && m_runningCommand) {
-        return runCommand(m_runningCommand->cmd);
+            && m_runningCommands.size() > 0) {
+        reAddRunningCommandToQueue();
+        return processCommandQueue();
     }
 
     m_errorOccurred = true;
@@ -140,5 +141,8 @@ void RedisClient::DefaultTransporter::reconnect()
     emit logEvent("Reconnect to host");
     m_loopTimer->stop();
     m_socket->abort();    
-    connectToHost();
+
+    if (connectToHost()) {
+        m_loopTimer->start();
+    }
 }

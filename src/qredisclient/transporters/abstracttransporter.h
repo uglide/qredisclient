@@ -32,6 +32,7 @@ signals:
     void logEvent(const QString&);
     void connected();
     void commandAdded();
+    void queueIsEmpty();
 
 public slots:
     virtual void init();
@@ -57,11 +58,6 @@ protected:
     virtual void sendCommand(const QByteArray& cmd) = 0;
     virtual void sendResponse(const Response &response);
 
-private:
-    void logResponse(const Response &response);
-    void processClusterRedirect(const Response& r);
-    void addSubscriptionsFromRunningCommand();
-
 protected:
     class RunningCommand {
     public:
@@ -70,12 +66,19 @@ protected:
         QSharedPointer<ResponseEmitter> emitter;
     };
 
+    void reAddRunningCommandToQueue(QObject* ignoreOwner=nullptr);
+
+private:
+    void logResponse(const Response &response);
+    void processClusterRedirect(QSharedPointer<RunningCommand> runningCommand,
+                                const Response& r);
+    void addSubscriptionsFromRunningCommand(QSharedPointer<RunningCommand> runningCommand);
+
 protected:
     Connection * m_connection;
-    QSharedPointer<RunningCommand> m_runningCommand;
+    QQueue<QSharedPointer<RunningCommand>> m_runningCommands;
     Response m_response;    
     QQueue<Command> m_commands;
-    QSharedPointer<QTimer> m_executionTimer;
     QSharedPointer<QTimer> m_loopTimer;
     typedef QHash<QByteArray, QSharedPointer<ResponseEmitter>> Subscriptions;
     Subscriptions m_subscriptions;
