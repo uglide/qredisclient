@@ -28,10 +28,13 @@ protected:
     QByteArray readFromSocket() override;
     void initSocket() override;
     bool connectToHost() override;
-    void sendCommand(const QByteArray& cmd) override;
+    void sendCommand(const QByteArray& cmd) override;    
 
 protected slots:
     void reconnect() override;
+
+private:
+    bool openTcpSocket();
 
 private slots:
     void OnSshConnectionError(QxtSshClient::Error);

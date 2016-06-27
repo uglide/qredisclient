@@ -27,12 +27,14 @@ void RedisClient::SshTransporter::disconnectFromHost()
     if (m_sshClient.isNull())
         return;
 
+    m_loopTimer->stop();
+
     if (m_socket)
         QObject::disconnect(m_socket, 0, 0, 0);
 
     QObject::disconnect(m_sshClient.data(), 0, 0, 0);
 
-    m_sshClient->resetState();
+    m_sshClient->disconnectFromHost();    
 }
 
 bool RedisClient::SshTransporter::isInitialized() const
@@ -42,12 +44,12 @@ bool RedisClient::SshTransporter::isInitialized() const
 
 bool RedisClient::SshTransporter::isSocketReconnectRequired() const
 {
-    return !m_socket;
+    return !m_socket || !m_socket->isOpen();
 }
 
 bool RedisClient::SshTransporter::canReadFromSocket()
 {
-    return m_socket;
+    return m_socket && m_socket->isOpen();
 }
 
 QByteArray RedisClient::SshTransporter::readFromSocket()
@@ -82,9 +84,20 @@ bool RedisClient::SshTransporter::connectToHost()
         return false;
     }
 
-    emit logEvent("SSH tunnel established. Connecting to redis-server...");
+    emit logEvent("SSH tunnel established. Connecting to redis-server...");    
 
-    //connect to redis   
+    return openTcpSocket();
+}
+
+void RedisClient::SshTransporter::sendCommand(const QByteArray &cmd)
+{
+    const char* cString = cmd.constData();
+    qDebug() << "Bytes written to socket" << m_socket->write(cString, cmd.size());
+}
+
+bool RedisClient::SshTransporter::openTcpSocket()
+{
+    auto config = m_connection->getConfig();
     m_socket = m_sshClient->openTcpSocket(config.host(), config.port());
 
     if (!m_socket) {
@@ -97,7 +110,7 @@ bool RedisClient::SshTransporter::connectToHost()
     socketWaiter.addSuccessSignal(m_socket, &QxtSshTcpSocket::readyRead);
 
     connect(m_socket, &QxtSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);
-    connect(m_socket, SIGNAL(destroyed()), this, SLOT(OnSshSocketDestroyed()));
+    connect(m_socket, &QxtSshTcpSocket::destroyed, this, &RedisClient::SshTransporter::OnSshSocketDestroyed);
 
     if (!socketWaiter.wait()) {
         emit errorOccurred(QString("SSH connection established, but redis connection failed"));
@@ -105,15 +118,9 @@ bool RedisClient::SshTransporter::connectToHost()
     }
 
     emit connected();
-    emit logEvent(QString("%1 > connected").arg(m_connection->getConfig().name()));
+    emit logEvent(QString("%1 > reconnected").arg(m_connection->getConfig().name()));
 
     return true;
-}
-
-void RedisClient::SshTransporter::sendCommand(const QByteArray &cmd)
-{
-    const char* cString = cmd.constData();
-    m_socket->write(cString, cmd.size());
 }
 
 void RedisClient::SshTransporter::OnSshConnectionError(QxtSshClient::Error error)
@@ -143,7 +150,8 @@ void RedisClient::SshTransporter::reconnect()
 {
     emit logEvent("Reconnect to host");
     m_loopTimer->stop();
-    if (m_socket) m_socket->close();
-    m_sshClient->resetState();    
-    connectToHost();
+
+    if (openTcpSocket()) {
+        m_loopTimer->start();
+    }
 }

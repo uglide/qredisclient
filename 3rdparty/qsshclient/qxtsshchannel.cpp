@@ -92,9 +92,17 @@ qint64 QxtSshChannel::readData(char* buff, qint64 len) {
 #ifdef QXT_DEBUG_SSH
             qDebug()<<"read err"<<ret;
 #endif
+            close();
+
             return -1;
         }
     }
+
+    if (libssh2_channel_eof(d->d_channel)) {
+        qDebug() << "SSH Channel EOF on read";
+        close();
+    }
+
     return ret;
 }
 
@@ -109,10 +117,18 @@ qint64 QxtSshChannel::writeData(const char* buff, qint64 len){
         }else{
 #ifdef QXT_DEBUG_SSH
             qDebug()<<"write err"<<ret;
-#endif
+#endif            
+            close();
+
             return -1;
         }
     }
+
+    if (libssh2_channel_eof(d->d_channel)) {
+        qDebug() << "SSH Channel EOF on write";
+        close();
+    }
+
     return ret;
 }
 /*!

@@ -190,7 +190,9 @@ void QxtSshClient::resetState()
  * disconnected() signal will be emitted.
  */
 void QxtSshClient::disconnectFromHost() {
-    d->d_reset();
+    d->d_tearDown();
+    d->abort();
+    //d->d_reset();
 }
 
 /*!
@@ -225,8 +227,15 @@ void QxtSshClient::setKeyFiles(const QString & publicKey,const QString & private
  */
 bool QxtSshClient::loadKnownHosts(const QString & file,KnownHostsFormat c){
     Q_UNUSED(c);
-    return (libssh2_knownhost_readfile(d->d_knownHosts, qPrintable(file),
-                                      LIBSSH2_KNOWNHOST_FILE_OPENSSH)==0);
+
+    if (libssh2_knownhost_readfile(d->d_knownHosts, qPrintable(file),
+                                   LIBSSH2_KNOWNHOST_FILE_OPENSSH) >= 0) {
+        return true;
+    } else {
+        libssh2_knownhost_free(d->d_knownHosts);
+        d->d_knownHosts = nullptr;
+        return false;
+    }
 }
 
 /*!
@@ -368,11 +377,36 @@ QxtSshClientPrivate::QxtSshClientPrivate()
 }
 
 QxtSshClientPrivate::~QxtSshClientPrivate(){
-    d_reset();
-    if(d_session){
+//    d_reset();
+//    if(d_session){
+//        libssh2_knownhost_free(d_knownHosts);
+//        libssh2_session_free(d_session);
+//    }
+}
+
+void QxtSshClientPrivate::d_tearDown()
+{
+    if (d_keepAliveTimer) {
+        d_keepAliveTimer->stop();
+        d_keepAliveTimer.clear();
+    }
+
+    if(d_knownHosts){
         libssh2_knownhost_free(d_knownHosts);
+    }
+    if(d_state>1){
+        libssh2_session_disconnect(d_session,"good bye!");
+    }
+    if(d_session){
         libssh2_session_free(d_session);
     }
+
+    d_state=0;
+    d_errorCode=0;
+    d_sleepInterval=5;
+    d_errorMessage=QString();
+    d_failedMethods.clear();
+    d_availableMethods.clear();
 }
 
 void QxtSshClientPrivate::d_connected(){
@@ -551,24 +585,7 @@ void QxtSshClientPrivate::d_reset(){
 #ifdef QXT_DEBUG_SSH
     qDebug("reset");
 #endif
-    //teardown
-    if(d_knownHosts){
-        libssh2_knownhost_free(d_knownHosts);
-    }
-    if(d_state>1){
-        libssh2_session_disconnect(d_session,"good bye!");
-    }
-    if(d_session){
-        libssh2_session_free(d_session);
-    }
-
-    d_state=0;
-    d_errorCode=0;
-    d_sleepInterval=5;
-    d_errorMessage=QString();
-    d_failedMethods.clear();
-    d_availableMethods.clear();
-
+    d_tearDown();
 
     //buildup
     d_session=libssh2_session_init_ex(NULL,NULL,NULL,reinterpret_cast<void*>(this));

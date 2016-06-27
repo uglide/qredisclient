@@ -44,7 +44,8 @@ class QxtSshClientPrivate : public QTcpSocket{
     Q_OBJECT
 public:
     QxtSshClientPrivate();
-    ~QxtSshClientPrivate();
+    virtual ~QxtSshClientPrivate();
+    void d_tearDown();
     void d_reset();
     void d_getLastError();
 
