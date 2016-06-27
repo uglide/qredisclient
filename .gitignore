@@ -1,3 +1,14 @@
 *.DS_Store
 *~
 *.user
+3rdparty/windows/rmt*
+obj/*
+*.lib
+*.exe
+*.pdb
+tests/build-*
+tests/functional/.idea
+tests/functional/*.json
+tests/functional/*.data
+tests/functional/bin/*
+*Redis-64*
