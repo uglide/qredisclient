@@ -63,6 +63,12 @@ bool RedisClient::DefaultTransporter::connectToHost()
     bool connectionResult = false;
 
     if (conf.useSsl()) {
+
+        if (!QSslSocket::supportsSsl()) {
+            emit errorOccurred("SSL Error: Openssl is missing. Please install Openssl.");
+            return false;
+        }
+
         QList<QSslCertificate> trustedCas = conf.sslCaCertificates(); // Required
 
         if (trustedCas.empty()) {
@@ -126,11 +132,18 @@ void RedisClient::DefaultTransporter::error(QAbstractSocket::SocketError error)
         QString("Connection error: %1").arg(m_socket->errorString())
         );
 
-    return sendResponse(m_response);
+    if (m_response.isValid())
+        return sendResponse(m_response);
 }
 
 void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors)
 {
+    if (errors.size() == 1 && errors.first().error() == QSslError::HostNameMismatch) {
+        m_socket->ignoreSslErrors();
+        emit logEvent("SSL: Ignore HostName Mismatch");
+        return;
+    }
+
     m_errorOccurred = true;
     for (QSslError err : errors)
         emit errorOccurred(QString("SSL error: %1").arg(err.errorString()));
