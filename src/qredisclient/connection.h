@@ -1,5 +1,8 @@
 #pragma once
 #include <QObject>
+#include <QList>
+#include <QMap>
+#include <QByteArray>
 #include <functional>
 #include <QVariantList>
 #include <QSharedPointer>
@@ -17,6 +20,8 @@ namespace RedisClient {
 class AbstractTransporter;
 class Executor;
 
+typedef QMap<int, int> DatabaseList;
+
 /**
  * @brief The ServerInfo struct
  * Represents redis-server information parsed from INFO command.
@@ -25,6 +30,7 @@ struct ServerInfo
 {
     double version;
     bool clusterMode;
+    DatabaseList databases;
     static ServerInfo fromString(const QString& info);
 };
 
@@ -97,6 +103,31 @@ public:
      * @return
      */
     virtual double getServerVersion();
+
+    /**
+     * @brief Get keyspace info parsed from INFO command
+     * @return
+     */
+    virtual DatabaseList getKeyspaceInfo();
+
+    /*
+     * Hi-Level Operations API
+     */
+    /**
+     * @brief RawKeysList
+     */
+    typedef QList<QByteArray> RawKeysList;
+
+    /**
+     * @brief getDatabaseKeys - async keys loading
+     * @param callback
+     * @param pattern
+     * @param dbIndex
+     */
+    virtual void getDatabaseKeys(
+            std::function<void(const RawKeysList&, const QString&)> callback,
+            const QString& pattern=QString("*"), uint dbIndex = 0
+            );
 
     /*
      * Command execution API

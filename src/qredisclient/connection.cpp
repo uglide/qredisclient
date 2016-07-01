@@ -1,12 +1,14 @@
 #include "connection.h"
 #include <QThread>
 #include <QDebug>
+#include <QRegularExpression>
 #include "command.h"
 #include "scancommand.h"
 #include "transporters/defaulttransporter.h"
 #include "transporters/sshtransporter.h"
 #include "scanresponse.h"
 #include "utils/sync.h"
+#include "utils/compat.h"
 
 RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
     : m_config(c),
@@ -231,6 +233,39 @@ double RedisClient::Connection::getServerVersion()
     return m_serverInfo.version;
 }
 
+RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo()
+{
+    return m_serverInfo.databases;
+}
+
+void RedisClient::Connection::getDatabaseKeys(std::function<void (const RedisClient::Connection::RawKeysList &, const QString &)> callback,
+                                              const QString &pattern, uint dbIndex)
+{
+    if (getServerVersion() >= 2.8) {
+        QList<QByteArray> rawCmd {
+            "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "10000"
+        };
+        QSharedPointer<ScanCommand> keyCmd(new ScanCommand(rawCmd, dbIndex));
+
+        retrieveCollection(keyCmd, [this, callback](QVariant r, QString err)
+        {
+            if (!err.isEmpty())
+                return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
+
+            return callback(convertQVariantList(r.toList()), QString());
+        });
+
+    } else {
+        command({"KEYS", pattern.toUtf8()}, this, [this, callback](RedisClient::Response r, QString err)
+        {
+            if (!err.isEmpty())
+                return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
+
+            return callback(convertQVariantList(r.getValue().toList()), QString());
+        }, dbIndex);
+    }
+}
+
 void RedisClient::Connection::createTransporter()
 {
     //todo : implement unix socket transporter
@@ -363,5 +398,26 @@ RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
                 0.0 : versionRegex.cap(1).toDouble();
     result.clusterMode = (modeRegex.indexIn(info) != -1
             && modeRegex.cap(1) == "cluster");
+
+    // Parse keyspace info
+    QRegularExpression getDbAndKeysCount("^db(\\d+):keys=(\\d+).*");
+    getDbAndKeysCount.setPatternOptions(QRegularExpression::MultilineOption);
+    QRegularExpressionMatchIterator iter = getDbAndKeysCount.globalMatch(info);
+    while (iter.hasNext()) {
+        QRegularExpressionMatch match = iter.next();
+        int dbIndex = match.captured(1).toInt();
+        result.databases.insert(dbIndex, match.captured(2).toInt());
+    }
+
+    if (result.databases.size() == 0)
+        return result;
+
+    int lastKnownDbIndex = result.databases.lastKey();
+    for (int dbIndex=0; dbIndex < lastKnownDbIndex; ++dbIndex) {
+         if (!result.databases.contains(dbIndex)) {
+             result.databases.insert(dbIndex, 0);
+         }
+    }
+
     return result;
 }
