@@ -284,30 +284,52 @@ QByteArray RedisClient::Response::getChannel() const
     return result[1].toByteArray();
 }
 
-// TBD: add pretty printing
-QString RedisClient::Response::valueToHumanReadString(const QVariant& value)
+QString RedisClient::Response::valueToHumanReadString(const QVariant& value, int indentLevel)
 {
-    if (value.isNull()) 
+    QString result;
+    QString indent = QString(" ").repeated(indentLevel);
+
+    if (value.isNull())
     {
-        return "NULL";
-    } else if (value.type() == QVariant::StringList) {
-        return printableString(convertQVariantList(value.toList()).join("\r\n"));
-    } else if (value.type() == QVariant::Type::List) {
-        QVariantList val = value.toList();
-        QByteArray result;
-        for (int i = 0; i < val.size(); i++) {
-            result.append(QString("%1) ").arg(QString::number(i+1)).toUtf8());
-            if (val.at(i).type() == QVariant::Type::List) {
-                result.append(convertQVariantList(val.at(i).toList()).join("\r\n"));
-            } else {
-                result.append(printableString(val.at(i).toByteArray()));
-            }
-            result.append("\r\n");
+        result = QString("null");
+    }
+    else if (value.type() == QMetaType::Bool)
+    {
+        result = QString(value.toBool() ? "true" : "false");
+    }
+    else if (value.type() == QVariant::StringList)
+    {
+        int index = 1;
+        for (QString line : value.toStringList()) {
+            result.append(
+                QString("%1 %2) %3\r\n")
+                        .arg(indent)
+                        .arg(QString::number(index++))
+                        .arg(QString("\"%1\"").arg(line))
+                        );
         }
-        return result;
+    }
+    else if (value.type() == QMetaType::QVariantList || value.canConvert(QMetaType::QVariantList))
+    {
+        QVariantList list = value.value<QVariantList>();
+
+        int index = 1;
+        for (QVariant item : list)
+        {
+            result.append(
+                QString("%1 %2) %3\r\n")
+                        .arg(indent)
+                        .arg(QString::number(index++))
+                        .arg(valueToHumanReadString(item, indentLevel + 1))
+                        );
+        }
+    }
+    else
+    {
+        result = QString("\"%1\"").arg(value.toString());
     }
 
-    return value.toString();
+    return indent + result;
 }
 
 bool RedisClient::Response::isErrorMessage() const

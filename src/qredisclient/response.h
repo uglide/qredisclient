@@ -50,7 +50,7 @@ public:
     QByteArray getUnusedBuffer();
     void reset();
 
-    static QString valueToHumanReadString(const QVariant&);
+    static QString valueToHumanReadString(const QVariant&, int indentLevel=0);
 
 protected:
     Type getResponseType(const QByteArray&) const;
