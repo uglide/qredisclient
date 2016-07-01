@@ -74,9 +74,13 @@ bool RedisClient::DefaultTransporter::connectToHost()
         if (trustedCas.empty()) {
             emit errorOccurred("SSL Error: no trusted Cas");
             return false;
+        }        
+
+        if (!m_socket->addCaCertificates(trustedCas)) {
+            emit errorOccurred("SSL Error: Cannot add trusted Cas");
+            return false;
         }
 
-        m_socket->addCaCertificates(trustedCas);
 
         QString privateKey = conf.sslPrivateKeyPath();
         if (!privateKey.isEmpty()) {
@@ -89,8 +93,7 @@ bool RedisClient::DefaultTransporter::connectToHost()
         }
 
         m_socket->connectToHostEncrypted(conf.host(), conf.port());
-        connectionResult = m_socket->waitForEncrypted(conf.connectionTimeout())
-                && m_socket->waitForConnected(conf.connectionTimeout());
+        connectionResult = m_socket->waitForEncrypted(conf.connectionTimeout());
 
     } else {
         m_socket->connectToHost(conf.host(), conf.port());
