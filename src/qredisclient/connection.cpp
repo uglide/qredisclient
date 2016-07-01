@@ -8,8 +8,11 @@
 #include "scanresponse.h"
 #include "utils/sync.h"
 
-RedisClient::Connection::Connection(const ConnectionConfig &c)
-    : m_config(c), m_dbNumber(0), m_currentMode(Mode::Normal)
+RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
+    : m_config(c),
+      m_dbNumber(0),
+      m_currentMode(Mode::Normal),
+      m_autoConnect(autoConnect)
 {            
 }
 
@@ -19,7 +22,7 @@ RedisClient::Connection::~Connection()
         disconnect();
 }
 
-bool RedisClient::Connection::connect() // todo: add block/unblock parameter
+bool RedisClient::Connection::connect(bool wait)
 {
     if (isConnected())
         return true;
@@ -40,7 +43,21 @@ bool RedisClient::Connection::connect() // todo: add block/unblock parameter
     QObject::connect(m_transporter.data(), &AbstractTransporter::connected,
                      this, &Connection::auth);
 
-    //wait for data
+    if (!wait) {
+        QObject::connect(m_transporter.data(), &AbstractTransporter::errorOccurred,
+                         this, [this](const QString& err) {
+            qDebug() << "Disconect on error: " << err;
+            disconnect();
+        });
+
+        SignalWaiter waiter(m_config.connectionTimeout());
+        waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);
+        m_transporterThread->start();
+        qDebug() << "Wait for transporter thread";
+        return waiter.wait();
+    }
+
+    //wait for connected state
     SignalWaiter waiter(m_config.connectionTimeout());
     waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
     waiter.addAbortSignal(this, &Connection::authError);
@@ -122,13 +139,40 @@ RedisClient::Response RedisClient::Connection::commandSync(QString cmd, QString 
     return commandSync(rawCmd, db);
 }
 
+RedisClient::Response RedisClient::Connection::commandSync(const Command& command)
+{
+    auto cmd = command;
+    Executor syncObject(cmd);
+
+    runCommand(cmd);
+
+    QString error;
+    RedisClient::Response r = syncObject.waitForResult(m_config.executeTimeout(), error);
+    if (r.isEmpty()) {
+        throw Exception("Execution timeout");
+    } else if (!error.isEmpty()) {
+        throw Exception(error);
+    }
+
+    return r;
+}
+
 void RedisClient::Connection::runCommand(Command &cmd)
 {
     if (!cmd.isValid())
         throw Exception("Command is not valid");
 
-    if (!isConnected())
-        throw Exception("Try run command in not connected state");   
+    if (!isConnected()) {
+        if (m_autoConnect) {
+            qDebug() << "Connect to Redis before running command (m_autoConnect == true)";
+            if (!connect(false) || !m_transporter) {
+                throw Exception("Cannot connect to redis-server. Details are available in connection log.");
+            }
+            qDebug() << "Continue command execution";
+        } else {
+            throw Exception("Try run command in not connected state");
+        }
+    }
 
     if (cmd.getOwner() && cmd.getOwner() != this)
         QObject::connect(cmd.getOwner(), SIGNAL(destroyed(QObject *)),
@@ -140,8 +184,12 @@ void RedisClient::Connection::runCommand(Command &cmd)
     waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::commandAdded);
     waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
 
+    qDebug() << "Send cmd to transporter:" << cmd.getRawString();
+
     emit addCommandToWorker(cmd);
-    waiter.wait();
+    bool result = waiter.wait();
+
+    qDebug() << "Cmd sent?" << result;
 }
 
 bool RedisClient::Connection::waitForIdle(int timeout)
@@ -257,24 +305,6 @@ void RedisClient::Connection::changeCurrentDbNumber(int db)
     } else {
         qWarning() << "Cannot lock db number mutex!";
     }
-}
-
-RedisClient::Response RedisClient::Connection::commandSync(const Command& command)
-{
-    auto cmd = command;
-    Executor syncObject(cmd);
-
-    try {
-        this->runCommand(cmd);
-    } catch (RedisClient::Connection::Exception& e) {
-        throw Exception("Cannot execute command." + QString(e.what()));
-    }
-
-    RedisClient::Response r = syncObject.waitForResult(m_config.executeTimeout());
-    if (r.isEmpty()) {
-        throw Exception("Execution timeout");
-    }
-    return r;
 }
 
 void RedisClient::Connection::auth()

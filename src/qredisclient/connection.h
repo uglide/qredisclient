@@ -48,7 +48,7 @@ public:
      * @param c - connection config
      * NOTE: different config options are required for different transporters.
      */
-    Connection(const ConnectionConfig &c);
+    Connection(const ConnectionConfig &c, bool autoConnect=true);
 
     /**
      * @brief ~Connection
@@ -58,10 +58,11 @@ public:
 
     /**
      * @brief connects to redis-server
+     * @param wait -  true = sync mode, false = async mode
      * @return true - on success
      * @throws Connection::Exception if config is invalid or something went wrong.
      */
-    virtual bool connect();
+    virtual bool connect(bool wait=true);
 
     /**
      * @brief isConnected
@@ -212,5 +213,6 @@ protected:
     ServerInfo m_serverInfo;
     Mode m_currentMode;
     QMutex m_dbNumberMutex;
+    bool m_autoConnect;
 };
 }

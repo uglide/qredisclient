@@ -19,10 +19,11 @@ class Executor : public QObject
     friend class Connection;
 private:
     Executor(Command& cmd);
-    Response waitForResult(unsigned int);
+    Response waitForResult(unsigned int, QString &err=QString());
     Response m_result;
     QEventLoop m_loop;
     QTimer m_timeoutTimer;
+    QString m_error;
 };
 
 class SignalWaiter : public QObject
@@ -51,5 +52,6 @@ private:
     QEventLoop m_loop;
     QTimer m_timeoutTimer;
     bool m_result;
+    bool m_resultReceived;
 };
 }

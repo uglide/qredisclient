@@ -39,7 +39,7 @@ void RedisClient::SshTransporter::disconnectFromHost()
 
 bool RedisClient::SshTransporter::isInitialized() const
 {
-    return !m_sshClient.isNull();
+    return !m_sshClient.isNull() && m_socket;
 }
 
 bool RedisClient::SshTransporter::isSocketReconnectRequired() const

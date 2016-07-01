@@ -46,6 +46,7 @@ protected slots:
     virtual void reconnect() = 0;
     virtual void processCommandQueue();
     virtual void runProcessingLoop();
+    virtual void cancelRunningCommands(const QString& error);
 
 protected:
     virtual bool isInitialized() const = 0;
@@ -66,7 +67,7 @@ protected:
         QSharedPointer<ResponseEmitter> emitter;
     };
 
-    void reAddRunningCommandToQueue(QObject* ignoreOwner=nullptr);
+    void reAddRunningCommandToQueue(QObject* ignoreOwner=nullptr);    
 
 private:
     void logResponse(const Response &response);

@@ -7,9 +7,10 @@ RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *c
     : m_connection(connection)
 {
     //connect signals & slots between connection & transporter
-    connect(connection, SIGNAL(addCommandToWorker(Command)), this, SLOT(addCommand(Command)));
-    connect(this, SIGNAL(errorOccurred(const QString&)), connection, SIGNAL(error(const QString&)));
-    connect(this, SIGNAL(logEvent(const QString&)), connection, SIGNAL(log(const QString&)));    
+    connect(connection, SIGNAL(addCommandToWorker(Command)), this, SLOT(addCommand(Command)));    
+    connect(this, SIGNAL(logEvent(const QString&)), connection, SIGNAL(log(const QString&)));
+
+    connect(this, &AbstractTransporter::errorOccurred, this, &AbstractTransporter::cancelRunningCommands);
 }
 
 RedisClient::AbstractTransporter::~AbstractTransporter()
@@ -22,6 +23,8 @@ void RedisClient::AbstractTransporter::init()
 {
     if (isInitialized())
         return;
+
+    qDebug() << "Init transporter";
 
     m_loopTimer = QSharedPointer<QTimer>(new QTimer);
     m_loopTimer->setSingleShot(false);
@@ -40,7 +43,8 @@ void RedisClient::AbstractTransporter::addCommand(Command cmd)
     else
         m_commands.enqueue(cmd);
 
-    processCommandQueue();
+    if ((cmd.isHiPriorityCommand() && isInitialized()) || m_loopTimer->isActive())
+        processCommandQueue();
 
     emit commandAdded();
 }
@@ -138,6 +142,24 @@ void RedisClient::AbstractTransporter::reAddRunningCommandToQueue(QObject *ignor
     }
 }
 
+void RedisClient::AbstractTransporter::cancelRunningCommands(const QString& err)
+{
+    emit logEvent("Cancel running commands");
+
+    for (auto curr = m_runningCommands.end(); curr != m_runningCommands.begin();) {
+        --curr;
+
+        auto rCmd = *curr;
+        if (rCmd->emitter) {
+            rCmd->emitter->sendResponse(Response(), err);
+        }
+
+        curr = m_runningCommands.erase(curr);
+    }
+
+    emit m_connection->error(err);
+}
+
 void RedisClient::AbstractTransporter::processCommandQueue()
 {    
     if (m_commands.isEmpty()) {
@@ -180,6 +202,7 @@ void RedisClient::AbstractTransporter::processCommandQueue()
 
 void RedisClient::AbstractTransporter::runProcessingLoop()
 {
+    qDebug() << "Start processing loop in transporter";
     m_loopTimer->start();
 }
 
