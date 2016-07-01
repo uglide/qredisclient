@@ -37,6 +37,7 @@ bool RedisClient::Connection::connect(bool wait)
 
     // Create & run transporter    
     m_transporterThread = QSharedPointer<QThread>(new QThread);
+    m_transporterThread->setObjectName("qredisclient::transporter_thread");
     m_transporter->moveToThread(m_transporterThread.data());
     QObject::connect(m_transporterThread.data(), &QThread::started,
                      m_transporter.data(), &AbstractTransporter::init);
