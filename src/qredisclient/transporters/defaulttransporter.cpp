@@ -76,11 +76,7 @@ bool RedisClient::DefaultTransporter::connectToHost()
             return false;
         }        
 
-        if (!m_socket->addCaCertificates(trustedCas)) {
-            emit errorOccurred("SSL Error: Cannot add trusted Cas");
-            return false;
-        }
-
+        m_socket->addCaCertificates(trustedCas);
 
         QString privateKey = conf.sslPrivateKeyPath();
         if (!privateKey.isEmpty()) {
