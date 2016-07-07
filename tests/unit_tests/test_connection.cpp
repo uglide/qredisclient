@@ -92,7 +92,7 @@ void TestConnection::runEmptyCommand()
     QCOMPARE(hasException, true);
 }
 
-void TestConnection::runCommandWithoutConnection()
+void TestConnection::autoConnect()
 {
     //given
     Connection connection(config);
@@ -106,7 +106,7 @@ void TestConnection::runCommandWithoutConnection()
     }
 
     //then
-    QCOMPARE(hasException, true);
+    QCOMPARE(hasException, false);
 }
 
 void TestConnection::runCommandAndDelete()
@@ -188,7 +188,8 @@ void TestConnection::checkQueueProcessing()
     }
 
     //then
-    //no exceptions
+    QCOMPARE(connection.waitForIdle(10000), true);
+    QCOMPARE(connection.commandSync("GET", "test_incr_key").getValue(), QVariant(1000));
 }
 
 void TestConnection::connectWithAuth()

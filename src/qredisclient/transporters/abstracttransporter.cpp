@@ -285,8 +285,6 @@ void RedisClient::AbstractTransporter::readyRead()
     if (m_response.isValid())
         m_response.reset();
 
-    qDebug() << "Parsed responses count:" << responses.size();
-
     for (auto r: responses) {
         sendResponse(r);
     }

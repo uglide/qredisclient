@@ -39,7 +39,7 @@ private slots:
      * dirty tests for runCommand()
      */
     void runEmptyCommand();
-    void runCommandWithoutConnection();
+    void autoConnect();
     void runCommandAndDelete();
 
     /*

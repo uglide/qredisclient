@@ -87,7 +87,7 @@ void TestResponse::valueToHumanReadString()
     QString actualResult = RedisClient::Response::valueToHumanReadString(testSource);
 
     //then
-    QCOMPARE(actualResult, testSource.toString());
+    QCOMPARE(actualResult, QString("\"test\""));
 }
 
 

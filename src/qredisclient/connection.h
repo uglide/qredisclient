@@ -200,9 +200,9 @@ public:
 
     /**
      * @brief waitForIdle - Wait until all commands in queue will be processed
-     * @param timeout
+     * @param timeout - in milliseconds
      */
-    bool waitForIdle(int timeout);
+    bool waitForIdle(uint timeout);
 
     /*
      * Low level functions for modification

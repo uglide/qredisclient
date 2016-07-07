@@ -185,17 +185,13 @@ void RedisClient::Connection::runCommand(Command &cmd)
     // wait for signal from transporter
     SignalWaiter waiter(m_config.executeTimeout());
     waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::commandAdded);
-    waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
-
-    qDebug() << "Send cmd to transporter:" << cmd.getRawString();
+    waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);   
 
     emit addCommandToWorker(cmd);
-    bool result = waiter.wait();
-
-    qDebug() << "Cmd sent?" << result;
+    bool result = waiter.wait();   
 }
 
-bool RedisClient::Connection::waitForIdle(int timeout)
+bool RedisClient::Connection::waitForIdle(uint timeout)
 {
     SignalWaiter waiter(timeout);
     waiter.addSuccessSignal(m_transporter.data(), &AbstractTransporter::queueIsEmpty);

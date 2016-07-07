@@ -1,5 +1,7 @@
 #pragma once
 #include <QDebug>
+#include <QSharedPointer>
+#include <QTimer>
 #include "qredisclient/command.h"
 #include "qredisclient/transporters/abstracttransporter.h"
 
@@ -51,6 +53,11 @@ public slots:
         RedisClient::Response r("+PONG\r\n");
         fakeResponses.push_front(r);
 
+        m_loopTimer = QSharedPointer<QTimer>(new QTimer);
+        m_loopTimer->setSingleShot(false);
+        m_loopTimer->setInterval(1000);
+        m_loopTimer->start();
+
         emit connected();
     }
     virtual void disconnect() { disconnectCalls++; }
@@ -73,7 +80,7 @@ protected:
             m_response = RedisClient::Response();
         }
 
-        m_runningCommand = QSharedPointer<RunningCommand>(new RunningCommand(cmd));
+        m_runningCommands.enqueue(QSharedPointer<RunningCommand>(new RunningCommand(cmd)));
 
         sendResponse(m_response);
     }

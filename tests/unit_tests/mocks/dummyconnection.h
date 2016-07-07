@@ -20,7 +20,7 @@ public:
         return !m_raiseExceptionOnConnect;
     }
 
-    bool connect() override
+    bool connect(bool wait=true) override
     {
         if (m_raiseExceptionOnConnect)
             throw RedisClient::Connection::Exception("fake error");
