@@ -9,8 +9,11 @@ SOURCES += $$PWD/hiredis/read.c \
 
 
 unix:mac {
-    INCLUDEPATH += /usr/local/Cellar/libssh2/1.7.0/include/
-    LIBS += -L/usr/local/Cellar/libssh2/1.7.0/lib/
+    INCLUDEPATH += /usr/local/Cellar/libssh2/1.7.0/include
+    LIBS += -L/usr/local/Cellar/libssh2/1.7.0/lib
+    
+    INCLUDEPATH += /usr/local/opt/openssl/include
+    LIBS += -L/usr/local/opt/openssl/lib
 }
 
 win32-msvc* {
