@@ -22,6 +22,7 @@ public:
 
     bool connect(bool wait=true) override
     {
+        Q_UNUSED(wait);
         if (m_raiseExceptionOnConnect)
             throw RedisClient::Connection::Exception("fake error");
 

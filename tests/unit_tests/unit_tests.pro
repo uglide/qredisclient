@@ -14,6 +14,11 @@ INCLUDEPATH += \
     $$PWD/
 
 DEFINES += INTEGRATION_TESTS
+DEFINES += QT_NO_DEBUG_OUTPUT
+
+isEmpty(DESTDIR) {
+    DESTDIR = $$PWD
+}
 
 unix:!mac {
     #code coverage

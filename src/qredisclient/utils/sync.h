@@ -19,7 +19,7 @@ class Executor : public QObject
     friend class Connection;
 private:
     Executor(Command& cmd);
-    Response waitForResult(unsigned int, QString &err=QString());
+    Response waitForResult(unsigned int, QString &err);
     Response m_result;
     QEventLoop m_loop;
     QTimer m_timeoutTimer;

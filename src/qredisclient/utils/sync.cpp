@@ -14,7 +14,7 @@ RedisClient::Executor::Executor(RedisClient::Command &cmd)
     connect(&m_timeoutTimer, SIGNAL(timeout()), &m_loop, SLOT(quit()));
 }
 
-RedisClient::Response RedisClient::Executor::waitForResult(unsigned int timeoutInMs, QString& err)
+RedisClient::Response RedisClient::Executor::waitForResult(unsigned int timeoutInMs, QString &err)
 {
     if (m_result.isValid() || !m_error.isEmpty())
         return m_result; // NOTE(u_glide): No need to wait if result already fetched
