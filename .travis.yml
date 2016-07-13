@@ -4,6 +4,7 @@ dist: trusty
 compiler:
   - gcc
 env:
+  - RDM_QT_VERSION=57
   - RDM_QT_VERSION=561
   - RDM_QT_VERSION=551
   - RDM_QT_VERSION=542
@@ -27,9 +28,9 @@ before_install:
 - gcc --version
 - gcov --version
 script: 
-  - cd ./tests/unit_tests
-  - ./run_tests
+  - if [ "$RDM_QT_VERSION" == "561" ]; then cd ./tests/unit_tests && ./run_tests; fi
+  - qmake & make
 after_success:
-  - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered
+  - if [ "$RDM_QT_VERSION" == "561" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
 services:
   - redis-server
