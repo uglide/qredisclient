@@ -94,7 +94,8 @@ QVariant* convertUnsafeArray(QVariant* arr)
 
     for (int index=0; index < val.size(); ++index) {
         if (val[index]->canConvert<QVector<QVariant*>>()) {
-            result.append(*convertUnsafeArray(val[index]));
+            QScopedPointer<QVariant> subArray(convertUnsafeArray(val[index]));
+            result.append(*subArray);
         } else {
             result.append(*val[index]);
             delete val[index];
@@ -115,6 +116,10 @@ bool RedisClient::Response::parse()
         qDebug() << "hiredis cannot parse buffer" << m_redisReader.data()->err;
         qDebug() << "current buffer:" << QByteArray::fromRawData(m_redisReader.data()->buf, m_redisReader.data()->len);
         qDebug() << "all buffer:" << m_responseSource;
+
+        if (reply)
+            delete reply;
+
         return false;
     }
 
@@ -195,8 +200,20 @@ void *RedisClient::Response::createNilObject(const redisReadTask *task)
 
 void RedisClient::Response::freeObject(void *obj)
 {
-    if (obj != nullptr)
-        delete (QVariant*)obj;
+    if (obj == nullptr)
+        return;
+
+    QVariant* o = (QVariant*)obj;
+
+    if (o->canConvert<QVector<QVariant*>>()) {
+        auto val = o->value<QVector<QVariant*>>();
+
+        for (int index=0; index < val.size(); ++index) {
+            freeObject((void *)val[index]);
+        }
+    }
+
+    delete o;
 }
 
 RedisClient::Response::Type RedisClient::Response::getResponseType(const QByteArray & r) const

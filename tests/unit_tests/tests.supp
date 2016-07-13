@@ -1,0 +1,14 @@
+{
+   ignore_false_positive
+   Memcheck:Leak
+   match-leak-kinds: definite
+   fun:_Znwm
+   fun:_ZN14TestConnection21testRetriveCollectionEv
+   fun:_ZN14TestConnection18qt_static_metacallEP7QObjectN11QMetaObject4CallEiPPv
+   fun:_ZNK11QMetaMethod6invokeEP7QObjectN2Qt14ConnectionTypeE22QGenericReturnArgument16QGenericArgumentS5_S5_S5_S5_S5_S5_S5_S5_S5_
+   fun:_ZN11QMetaObject12invokeMethodEP7QObjectPKcN2Qt14ConnectionTypeE22QGenericReturnArgument16QGenericArgumentS7_S7_S7_S7_S7_S7_S7_S7_S7_
+   obj:/opt/qt56/lib/libQt5Test.so.5.6.1
+   fun:_ZN5QTest5qExecEP7QObjectiPPc
+   fun:main
+}
+

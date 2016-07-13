@@ -17,13 +17,20 @@ int main(int argc, char *argv[])
 
     initRedisClient();
 
+    QScopedPointer<QObject> testCommand(new TestCommand);
+    QScopedPointer<QObject> testSsh(new TestSsh);
+    QScopedPointer<QObject> testResponse(new TestResponse);
+    QScopedPointer<QObject> testConfig(new TestConfig);
+    QScopedPointer<QObject> testText(new TestText);
+    QScopedPointer<QObject> testConnection(new TestConnection);
+
     int allTestsResult = 0
-            + QTest::qExec(new TestCommand, argc, argv)
-            + QTest::qExec(new TestSsh, argc, argv)
-            + QTest::qExec(new TestResponse, argc, argv)
-            + QTest::qExec(new TestConfig, argc, argv)
-            + QTest::qExec(new TestText, argc, argv)
-            + QTest::qExec(new TestConnection, argc, argv)
+            + QTest::qExec(testCommand.data(), argc, argv)
+            + QTest::qExec(testSsh.data(), argc, argv)
+            + QTest::qExec(testResponse.data(), argc, argv)
+            + QTest::qExec(testConfig.data(), argc, argv)
+            + QTest::qExec(testText.data(), argc, argv)
+            + QTest::qExec(testConnection.data(), argc, argv)
             ;
 
     if (allTestsResult == 0)

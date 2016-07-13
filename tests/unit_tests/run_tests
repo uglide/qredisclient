@@ -1,0 +1,45 @@
+#!/bin/bash
+set -e
+ROOT_DIR=`readlink -f ./../../`
+BASE_DIR=`pwd`
+OBJ_DIR=$BASE_DIR/obj
+
+#Build
+export LDFLAGS="-lgcov -fprofile-arcs"
+export CPPFLAGS="-fprofile-arcs -ftest-coverage"
+rm -fR coverage* *.gc* $OBJ_DIR/*.gc* || true
+
+
+echo "==========================================="
+echo "Build tests:"
+echo "==========================================="
+qmake && make -s clean && make -sj 4
+
+
+echo "==========================================="
+echo "Init coverage files:"
+echo "==========================================="
+lcov --base-directory $BASE_DIR --capture --initial --directory $OBJ_DIR --output-file coverage.info.base
+
+
+echo "==========================================="
+echo "Run tests with valgrind and coverage:"
+echo "==========================================="
+valgrind --tool=memcheck --leak-check=full --track-origins=yes --suppressions=tests.supp $BASE_DIR/tests
+
+# Generate coverage
+{
+	lcov --capture --directory $OBJ_DIR --base-directory $BASE_DIR --output-file coverage.info.run
+	lcov -a coverage.info.base -a coverage.info.run -o coverage.info
+	lcov -e coverage.info "$ROOT_DIR/*" -o coverage.info.filtered
+	lcov -r coverage.info.filtered "$ROOT_DIR/tests/*" -o coverage.info.filtered
+	lcov -r coverage.info.filtered "$ROOT_DIR/3rdparty/*" -o coverage.info.filtered
+} &> /dev/null
+
+# Generate HTML report
+#{
+#	rm -fR coverage_report || true
+#	mkdir coverage_report
+#	genhtml coverage.info.filtered --output-directory coverage_report
+#} &> /dev/null
+#open coverage_report/index.html
