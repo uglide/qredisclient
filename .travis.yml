@@ -29,7 +29,7 @@ before_install:
 - gcov --version
 script: 
   - if [ "$RDM_QT_VERSION" == "561" ]; then cd ./tests/unit_tests && ./run_tests; fi
-  - qmake & make
+  - qmake && make
 after_success:
   - if [ "$RDM_QT_VERSION" == "561" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
 services:
