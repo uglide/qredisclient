@@ -25,7 +25,7 @@ lcov --base-directory $BASE_DIR --capture --initial --directory $OBJ_DIR --outpu
 echo "==========================================="
 echo "Run tests with valgrind and coverage:"
 echo "==========================================="
-valgrind --tool=memcheck --leak-check=full --track-origins=yes --demangle=no --gen-suppressions=yes --suppressions=tests.supp $BASE_DIR/tests
+valgrind --tool=memcheck --leak-check=full --track-origins=yes --suppressions=tests.supp $BASE_DIR/tests
 
 # Generate coverage
 {
