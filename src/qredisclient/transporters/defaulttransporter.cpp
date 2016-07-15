@@ -3,6 +3,8 @@
 #include "qredisclient/connectionconfig.h"
 #include "qredisclient/utils/sync.h"
 
+#include <QSslConfiguration>
+
 RedisClient::DefaultTransporter::DefaultTransporter(RedisClient::Connection *c)
     : RedisClient::AbstractTransporter(c), m_socket(nullptr), m_errorOccurred(false)
 {
@@ -69,14 +71,13 @@ bool RedisClient::DefaultTransporter::connectToHost()
             return false;
         }
 
-        QList<QSslCertificate> trustedCas = conf.sslCaCertificates(); // Required
+        m_socket->setSslConfiguration(QSslConfiguration::defaultConfiguration());
 
-        if (trustedCas.empty()) {
-            emit errorOccurred("SSL Error: no trusted Cas");
-            return false;
-        }        
+        QList<QSslCertificate> trustedCas = conf.sslCaCertificates();
 
-        m_socket->addCaCertificates(trustedCas);
+        if (!trustedCas.empty()) {
+            m_socket->addCaCertificates(trustedCas);            
+        }                
 
         QString privateKey = conf.sslPrivateKeyPath();
         if (!privateKey.isEmpty()) {

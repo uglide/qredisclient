@@ -61,6 +61,7 @@ public:
      * NOTE: SSL over SSH tunnel is not supported!
      */
     bool useSsl() const;
+    void setSsl(bool enabled);
     QList<QSslCertificate> sslCaCertificates() const;
     QString sslCaCertPath() const;
     QString sslPrivateKeyPath() const;

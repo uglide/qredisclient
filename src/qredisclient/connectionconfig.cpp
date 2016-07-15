@@ -201,7 +201,12 @@ bool RedisClient::ConnectionConfig::useAuth() const
 
 bool RedisClient::ConnectionConfig::useSsl() const
 {
-    return !param<QString>("ssl_ca_cert_path").isEmpty();
+    return param<bool>("ssl");
+}
+
+void RedisClient::ConnectionConfig::setSsl(bool enabled)
+{
+    setParam<bool>("ssl", enabled);
 }
 
 bool RedisClient::ConnectionConfig::isValid() const
