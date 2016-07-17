@@ -12,8 +12,8 @@ unix:mac {
     INCLUDEPATH += /usr/local/Cellar/libssh2/1.7.0/include
     LIBS += -L/usr/local/Cellar/libssh2/1.7.0/lib
     
-    INCLUDEPATH += /usr/local/opt/openssl/include
-    LIBS += -L/usr/local/opt/openssl/lib
+    INCLUDEPATH += /usr/local/Cellar/openssl/1.0.2h_1/include
+    LIBS += -L/usr/local/Cellar/openssl/1.0.2h_1/lib
 }
 
 win32-msvc* {
