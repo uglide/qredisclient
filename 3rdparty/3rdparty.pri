@@ -29,11 +29,21 @@ win32-msvc* {
     CONFIG(release, debug|release) {
         WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static/zlibstat.lib
         WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.6.0.2/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
-        WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
+
+        defined(OPENSSL_STATIC) {
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
+        } else {
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/dynamic
+        }
     } else: CONFIG(debug, debug|release) {
         WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static/zlibstat.lib
         WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.6.0.2/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
-        WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
+
+        defined(OPENSSL_STATIC) {
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
+        } else {
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/dynamic
+        }
     }
 
     LIBS += $$WIN_DEPS_PATH -L$$WIN_DEPS_PATH2 -L$$WIN_DEPS_PATH3 -llibssh2 -llibeay32 -lssleay32 -lgdi32 -lws2_32 -lkernel32 -luser32 -lshell32 -luuid -lole32 -ladvapi32
