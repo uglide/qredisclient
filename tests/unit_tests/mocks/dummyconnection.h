@@ -81,6 +81,11 @@ public:
             RedisClient::Response r(response.toLatin1());
             fakeResponses.push_back(r);
         }
+
+        if (fakeResponses.size() > 0 && fakeResponses.first().toRawString().contains("# Keyspace")) {
+            m_serverInfo = RedisClient::ServerInfo::fromString(fakeResponses.first().getValue().toString());
+            fakeResponses.removeFirst();
+        }
     }
 
 private:
