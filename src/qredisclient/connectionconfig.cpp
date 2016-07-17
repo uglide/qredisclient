@@ -135,6 +135,7 @@ void RedisClient::ConnectionConfig::setSslLocalCertPath(QString path)
 
 void RedisClient::ConnectionConfig::setSslSettigns(QString sslCaCertPath, QString sslPrivateKeyPath, QString sslLocalCertPath)
 {
+    setParam<bool>("ssl", true);
     setParam<QString>("ssl_ca_cert_path", sslCaCertPath);
     setParam<QString>("ssl_private_key_path", sslPrivateKeyPath);
     setParam<QString>("ssl_local_cert_path", sslLocalCertPath);
