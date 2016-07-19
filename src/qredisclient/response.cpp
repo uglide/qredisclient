@@ -61,7 +61,7 @@ QByteArray RedisClient::Response::getUnusedBuffer()
     if (!hasUnusedBuffer())
         return QByteArray{};
 
-    return m_responseSource.mid(m_redisReader->pos);
+    return QByteArray::fromRawData(m_redisReader->buf, m_redisReader->len).mid(m_redisReader->pos);
 }
 
 QString RedisClient::Response::toRawString() const
@@ -113,7 +113,7 @@ bool RedisClient::Response::parse()
     QVariant* reply = nullptr;
 
     if (redisReaderGetReply(m_redisReader.data(), (void **)&reply) == REDIS_ERR) {
-        qDebug() << "hiredis cannot parse buffer" << m_redisReader.data()->err;
+        qDebug() << "hiredis cannot parse buffer" << m_redisReader.data()->errstr;
         qDebug() << "current buffer:" << QByteArray::fromRawData(m_redisReader.data()->buf, m_redisReader.data()->len);
         qDebug() << "all buffer:" << m_responseSource;
 
@@ -254,9 +254,7 @@ bool RedisClient::Response::isArray() const
 
 bool RedisClient::Response::hasUnusedBuffer() const
 {
-    return m_result
-            && m_redisReader->pos > 0
-            && m_redisReader->pos < m_responseSource.size();
+    return m_result && m_redisReader->pos != m_redisReader->len;
 }
 
 bool RedisClient::Response::isAskRedirect() const
