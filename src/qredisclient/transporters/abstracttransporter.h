@@ -58,6 +58,7 @@ protected:
     virtual void runCommand(const Command &command);
     virtual void sendCommand(const QByteArray& cmd) = 0;
     virtual void sendResponse(const Response &response);
+    void resetDbIndex();
 
 protected:
     class RunningCommand {

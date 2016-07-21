@@ -126,6 +126,11 @@ void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response&
     runningCommand.clear();
 }
 
+void RedisClient::AbstractTransporter::resetDbIndex()
+{
+   m_connection->changeCurrentDbNumber(0);
+}
+
 void RedisClient::AbstractTransporter::reAddRunningCommandToQueue(QObject *ignoreOwner)
 {
     for (auto curr = m_runningCommands.end(); curr != m_runningCommands.begin();) {

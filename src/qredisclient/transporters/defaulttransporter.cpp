@@ -156,6 +156,7 @@ void RedisClient::DefaultTransporter::reconnect()
     m_socket->abort();    
 
     if (connectToHost()) {
+        resetDbIndex();
         m_loopTimer->start();
     }
 }

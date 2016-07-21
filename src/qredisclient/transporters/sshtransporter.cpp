@@ -152,6 +152,7 @@ void RedisClient::SshTransporter::reconnect()
     m_loopTimer->stop();
 
     if (openTcpSocket()) {
+        resetDbIndex();
         m_loopTimer->start();
     }
 }
