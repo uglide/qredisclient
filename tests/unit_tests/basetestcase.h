@@ -24,7 +24,7 @@ protected:
 
     QSharedPointer<DummyConnection> getFakeConnection(const QList<QVariant>& expectedScanResponses = QList<QVariant>(),
                                                       const QStringList& expectedResponses = QStringList(),
-                                                      double version=2.6,
+                                                      double version=2.8,
                                                       bool raise_error=false);
 
     void wait(int ms);

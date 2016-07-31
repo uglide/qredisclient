@@ -11,7 +11,8 @@ public:
         : RedisClient::Connection(RedisClient::ConnectionConfig()),
           runCommandCalled(0), retrieveCollectionCalled(0),
           getServerVersionCalled(0), m_version(version), 
-          m_raiseExceptionOnConnect(raise_error)
+          m_raiseExceptionOnConnect(raise_error),
+          returnErrorOnCmdRun(false)
     {
     }
 
@@ -55,6 +56,12 @@ public:
     {
         RedisClient::Response resp;
 
+        if (returnErrorOnCmdRun) {
+            auto callback = cmd.getCallBack();
+            callback(resp, QString("fake error"));
+            return;
+        }
+
         if (fakeResponses.size()) {
            resp = fakeResponses.first();
            fakeResponses.removeFirst();
@@ -65,7 +72,8 @@ public:
         auto callback = cmd.getCallBack();
         callback(resp, QString());
 
-        runCommandCalled++;        
+        runCommandCalled++;
+        executedCommands.push_back(cmd);
     }
 
     uint runCommandCalled;
@@ -87,6 +95,9 @@ public:
             fakeResponses.removeFirst();
         }
     }
+
+    QList<RedisClient::Command> executedCommands;
+    bool returnErrorOnCmdRun;
 
 private:
     double m_version;
