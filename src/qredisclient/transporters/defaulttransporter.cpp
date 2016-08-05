@@ -113,7 +113,16 @@ bool RedisClient::DefaultTransporter::connectToHost()
 
 void RedisClient::DefaultTransporter::sendCommand(const QByteArray& cmd)
 {
-    m_socket->write(cmd);
+    QByteArray command = cmd;
+    char* data = command.data();
+    qint64 total = 0;
+    qint64 sent;
+
+    while (total < cmd.size()) {
+        sent = m_socket->write(data + total, cmd.size() - total);
+        qDebug() << "Bytes written to socket" << sent;
+        total += sent;
+    }
     m_socket->flush();
 }
 

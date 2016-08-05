@@ -91,8 +91,16 @@ bool RedisClient::SshTransporter::connectToHost()
 
 void RedisClient::SshTransporter::sendCommand(const QByteArray &cmd)
 {
-    const char* cString = cmd.constData();
-    qDebug() << "Bytes written to socket" << m_socket->write(cString, cmd.size());
+    QByteArray command = cmd;
+    char* data = command.data();
+    qint64 total = 0;
+    qint64 sent;
+
+    while (total < cmd.size()) {
+        sent = m_socket->write(data + total, cmd.size() - total);
+        qDebug() << "Bytes written to socket" << sent;
+        total += sent;
+    }
 }
 
 bool RedisClient::SshTransporter::openTcpSocket()
