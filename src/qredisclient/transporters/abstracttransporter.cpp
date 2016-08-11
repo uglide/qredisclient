@@ -36,7 +36,7 @@ void RedisClient::AbstractTransporter::init()
     connectToHost();
 }
 
-void RedisClient::AbstractTransporter::addCommand(Command cmd)
+void RedisClient::AbstractTransporter::addCommand(const Command& cmd)
 {
     if (cmd.isHiPriorityCommand())
         m_commands.prepend(cmd);
@@ -184,18 +184,20 @@ void RedisClient::AbstractTransporter::processCommandQueue()
         ++curr;
     }    
 
-    if (m_runningCommands.size() > 0 && m_commands.head().isSelectCommand()) {
+    Command& head = m_commands.head();
+
+    if (m_runningCommands.size() > 0 && head.isSelectCommand()) {
         qDebug() << "Wait for regular commands before db SELECT";
         return;
     }
 
-    if (m_commands.head().hasDbIndex() && m_connection->m_dbNumber != m_commands.head().getDbIndex()) {
+    if (head.hasDbIndex() && m_connection->m_dbNumber != head.getDbIndex()) {
         if (m_runningCommands.size() > 0) {
             qDebug() << "Wait for regular commands before db SELECT";
             return;
         }
 
-        QList<QByteArray> selectCmdRaw = {"SELECT", QString::number(m_commands.head().getDbIndex()).toLatin1()};
+        QList<QByteArray> selectCmdRaw = {"SELECT", QString::number(head.getDbIndex()).toLatin1()};
         Command selectCmd(selectCmdRaw);
         qDebug() << "SELECT proper DB for running command.";
         runCommand(selectCmd);
