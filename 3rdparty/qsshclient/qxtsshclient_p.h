@@ -40,6 +40,9 @@ extern "C"{
 #include <errno.h>
 }
 
+static_assert((LIBSSH2_VERSION_MAJOR == 1) && (LIBSSH2_VERSION_MINOR >= 6), "QRedisClient requires libss2 >= 1.6.0");
+
+
 class QxtSshClientPrivate : public QTcpSocket{
     Q_OBJECT
 public:

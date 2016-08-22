@@ -47,8 +47,13 @@ win32-msvc* {
     }
 
     LIBS += $$WIN_DEPS_PATH -L$$WIN_DEPS_PATH2 -L$$WIN_DEPS_PATH3 -llibssh2 -llibeay32 -lssleay32 -lgdi32 -lws2_32 -lkernel32 -luser32 -lshell32 -luuid -lole32 -ladvapi32
-} else {
-    LIBS += -lssl -lz -lssh2
+} else {    
+   exists( /usr/local/lib/libssh2.a ) {
+      LIBS += /usr/local/lib/libssh2.a -lz -lssl -lcrypto
+      INCLUDEPATH += /usr/local/include/
+   } else {
+      LIBS += -lssl -lz -lssh2
+   }
 }
 
 
