@@ -8,14 +8,21 @@ env:
   - RDM_QT_VERSION=561
   - RDM_QT_VERSION=551
   - RDM_QT_VERSION=542
-before_install:
+install:
 - sudo apt-key update
 - sudo apt-get update
 - sudo add-apt-repository --yes ppa:beineri/opt-qt${RDM_QT_VERSION}-trusty
 - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
 - sudo apt-get update -qq
-- sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 libssh2-1-dev -y -qq
-- sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind -y -qq
+- sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 -y -qq
+- sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake -y -qq
+- git clone https://github.com/libssh2/libssh2.git libssh2
+- cd libssh2
+- git checkout libssh2-1.6.0
+- mkdir bin && cd bin
+- cmake -DCRYPTO_BACKEND=OpenSSL -DENABLE_ZLIB_COMPRESSION=ON ..
+- cmake --build .
+- sudo make install
 - sudo rm -f /usr/bin/gcov
 - sudo rm -f /usr/bin/gcc
 - sudo rm -f /usr/bin/g++
