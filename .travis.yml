@@ -23,6 +23,7 @@ install:
 - cmake -DCRYPTO_BACKEND=OpenSSL -DENABLE_ZLIB_COMPRESSION=ON ..
 - cmake --build .
 - sudo make install
+- cd ../../
 - sudo rm -f /usr/bin/gcov
 - sudo rm -f /usr/bin/gcc
 - sudo rm -f /usr/bin/g++
