@@ -47,7 +47,7 @@ public slots:
         initCalls++;
 
         // Init command tested after socket connection
-        RedisClient::Response info("+FAKE_SERVER_INFO\r\n");
+        RedisClient::Response info("+redis_version:999.999.999\r\n");
         fakeResponses.push_front(info);
 
         RedisClient::Response r("+PONG\r\n");
