@@ -117,8 +117,7 @@ bool RedisClient::Response::parse()
         qDebug() << "current buffer:" << QByteArray::fromRawData(m_redisReader.data()->buf, m_redisReader.data()->len);
         qDebug() << "all buffer:" << m_responseSource;
 
-        if (reply)
-            delete reply;
+        delete reply;
 
         return false;
     }
@@ -308,7 +307,7 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value, int
     {
         result = QString("null");
     }
-    else if (value.type() == QMetaType::Bool)
+    else if (value.type() == QVariant::Bool)
     {
         result = QString(value.toBool() ? "true" : "false");
     }
@@ -324,7 +323,7 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value, int
                         );
         }
     }
-    else if (value.type() == QMetaType::QVariantList || value.canConvert(QMetaType::QVariantList))
+    else if (value.type() == QVariant::List || value.canConvert(QVariant::List))
     {
         QVariantList list = value.value<QVariantList>();
 

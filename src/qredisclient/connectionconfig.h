@@ -28,9 +28,13 @@ public:
      * @param port
      */
     ConnectionConfig(const QString & host = "", const QString & auth = "",
-                     const uint port = DEFAULT_REDIS_PORT, const QString & name = "");
-    ConnectionConfig & operator = (const ConnectionConfig & other);
+                     const uint port = DEFAULT_REDIS_PORT, const QString & name = "");    
+
     ConnectionConfig(const QVariantHash& options);
+
+    ConnectionConfig(const ConnectionConfig & other);
+
+    ConnectionConfig & operator = (const ConnectionConfig & other);
 
     QString name() const;
     QString host() const;

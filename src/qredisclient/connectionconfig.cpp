@@ -28,6 +28,14 @@ RedisClient::ConnectionConfig::ConnectionConfig(const QVariantHash &options)
 {
 }
 
+RedisClient::ConnectionConfig::ConnectionConfig(const RedisClient::ConnectionConfig &other)
+{
+    if (this != &other) {
+        m_parameters = other.m_parameters;
+        m_owner = other.m_owner;
+    }
+}
+
 QString RedisClient::ConnectionConfig::name() const
 {
     return param<QString>("name");

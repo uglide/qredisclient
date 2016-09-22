@@ -135,13 +135,14 @@ void RedisClient::SshTransporter::OnSshConnectionError(QxtSshClient::Error error
 {
     if (!m_isHostKeyAlreadyAdded && QxtSshClient::HostKeyUnknownError == error) {
         QxtSshKey hostKey = m_sshClient->hostKey();
-        m_sshClient->addKnownHost(m_connection->getConfig().sshHost(), hostKey);
+        ConnectionConfig config = m_connection->getConfig();
+
+        m_sshClient->addKnownHost(config.sshHost(), hostKey);
         m_sshClient->resetState();
-        m_sshClient->connectToHost(m_connection->getConfig().sshUser(),
-                                   m_connection->getConfig().sshHost(),
-                                   m_connection->getConfig().sshPort());
+        m_sshClient->connectToHost(config.sshUser(), config.sshHost(), config.sshPort());
 
         m_isHostKeyAlreadyAdded = true;
+
         return;
     }
 

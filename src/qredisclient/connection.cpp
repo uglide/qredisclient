@@ -13,6 +13,7 @@
 RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
     : m_config(c),
       m_dbNumber(0),
+      m_serverInfo(),
       m_currentMode(Mode::Normal),
       m_autoConnect(autoConnect)
 {            
@@ -188,7 +189,7 @@ void RedisClient::Connection::runCommand(Command &cmd)
     waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);   
 
     emit addCommandToWorker(cmd);
-    bool result = waiter.wait();   
+    waiter.wait();
 }
 
 bool RedisClient::Connection::waitForIdle(uint timeout)
@@ -295,8 +296,8 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
         result = QSharedPointer<QVariantList>(new QVariantList());
 
     cmd->setCallBack(this, [this, cmd, result, callback](RedisClient::Response r, QString error){
-        if (r.isErrorMessage()) {
-            callback(r.getValue(), r.getValue().toString());
+        if (r.isErrorMessage() || !error.isEmpty()) {
+            callback(QVariant(), error.isEmpty()? r.getValue().toString() : error);
             return;
         }
 
