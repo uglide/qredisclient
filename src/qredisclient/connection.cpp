@@ -10,6 +10,8 @@
 #include "utils/sync.h"
 #include "utils/compat.h"
 
+const QString END_OF_COLLECTION = "end_of_collection";
+
 RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
     : m_config(c),
       m_dbNumber(0),
@@ -210,6 +212,26 @@ void RedisClient::Connection::retrieveCollection(QSharedPointer<RedisClient::Sca
     processScanCommand(cmd, callback);
 }
 
+void RedisClient::Connection::retrieveCollectionIncrementally(QSharedPointer<RedisClient::ScanCommand> cmd,
+                                                              RedisClient::Connection::IncrementalCollectionCallback callback)
+{
+    if (getServerVersion() < 2.8)
+        throw Exception("Scan commands not supported by redis-server.");
+
+    if (!cmd->isValidScanCommand())
+        throw Exception("Invalid command");
+
+    processScanCommand(cmd, [this, callback](QVariant c, QString err) {
+        if (err == END_OF_COLLECTION) {
+            callback(c, QString(), true);
+        } else if (!err.isEmpty()) {
+            callback(c, err, true);
+        } else {
+            callback(c, QString(), false);
+        }
+    }, QSharedPointer<QVariantList>(), true);
+}
+
 RedisClient::ConnectionConfig RedisClient::Connection::getConfig() const
 {
     return m_config;
@@ -240,7 +262,7 @@ void RedisClient::Connection::getDatabaseKeys(std::function<void (const RedisCli
 {
     if (getServerVersion() >= 2.8) {
         QList<QByteArray> rawCmd {
-            "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "10000"
+            "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "100000"
         };
         QSharedPointer<ScanCommand> keyCmd(new ScanCommand(rawCmd, dbIndex));
 
@@ -289,19 +311,28 @@ RedisClient::Response RedisClient::Connection::internalCommandSync(QList<QByteAr
 
 void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd,
                                                  CollectionCallback callback,
-                                                 QSharedPointer<QVariantList> result)
+                                                 QSharedPointer<QVariantList> result,
+                                                 bool incrementalProcessing)
 {
     if (result.isNull())
         result = QSharedPointer<QVariantList>(new QVariantList());
 
-    cmd->setCallBack(this, [this, cmd, result, callback](RedisClient::Response r, QString error){
+    cmd->setCallBack(this, [this, cmd, result, callback, incrementalProcessing]
+                     (RedisClient::Response r, QString error){
         if (r.isErrorMessage()) {
             callback(r.getValue(), r.getValue().toString());
             return;
         }
 
-        if (!ScanResponse::isValidScanResponse(r) && !result->isEmpty()) {
-            callback(QVariant(*result), QString());
+        if (incrementalProcessing)
+            result->clear();
+
+        if (!ScanResponse::isValidScanResponse(r)) {
+            if (result->isEmpty())
+                callback(QVariant(), incrementalProcessing ? END_OF_COLLECTION : QString());
+            else
+                callback(QVariant(*result), QString());
+
             return;
         }
 
@@ -316,7 +347,7 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
         result->append(scanResp->getCollection());
 
         if (scanResp->getCursor() <= 0) {            
-            callback(QVariant(*result), QString());
+            callback(QVariant(*result), incrementalProcessing ? END_OF_COLLECTION : QString());
             return;
         }
 
@@ -387,10 +418,31 @@ QSharedPointer<RedisClient::AbstractTransporter> RedisClient::Connection::getTra
 
 RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
 {
+    QStringList lines = info.split("\r\n");
+
+    ParsedServerInfo parsed;
+    QString currentSection {"unknown"};
+    int posOfSeparator = -1;
+
+    foreach (QString line, lines) {
+        if (line.startsWith("#")) {
+            currentSection = line.mid(2).toLower();
+            continue;
+        }
+
+        posOfSeparator = line.indexOf(':');
+
+        if (posOfSeparator == -1)
+            continue;
+
+        parsed[currentSection][line.mid(0, posOfSeparator)] = line.mid(posOfSeparator + 1);
+    }
+
     QRegExp versionRegex("redis_version:([0-9]+\\.[0-9]+)", Qt::CaseInsensitive, QRegExp::RegExp2);
     QRegExp modeRegex("redis_mode:([a-z]+)", Qt::CaseInsensitive, QRegExp::RegExp2);
 
     RedisClient::ServerInfo result;
+    result.parsed = parsed;
     result.version = (versionRegex.indexIn(info) == -1)?
                 0.0 : versionRegex.cap(1).toDouble();
     result.clusterMode = (modeRegex.indexIn(info) != -1

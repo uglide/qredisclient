@@ -31,6 +31,36 @@ struct ServerInfo
     double version;
     bool clusterMode;
     DatabaseList databases;
+
+    class ParsedServerInfo : public QHash<QString, QHash<QString, QString>>
+    {
+    public:
+        QVariantMap toVariantMap()
+        {
+            QVariantMap categories;
+            QHashIterator<QString,  QHash<QString, QString>> catIterator(*this);
+
+            while (catIterator.hasNext())
+            {
+                catIterator.next();
+                QHashIterator<QString, QString> propIterator(catIterator.value());
+                QVariantMap properties;
+
+                while (propIterator.hasNext())
+                {
+                    propIterator.next();
+                    properties.insert(propIterator.key(), propIterator.value());
+                }
+
+                categories.insert(catIterator.key(), properties);
+            }
+
+            return categories;
+        }
+    };
+
+    ParsedServerInfo parsed;
+
     static ServerInfo fromString(const QString& info);
 };
 
@@ -184,12 +214,25 @@ public:
     typedef std::function<void(QVariant, QString err)>  CollectionCallback;
 
     /**
+     * @brief IncrementalCollectionCallback
+     */
+    typedef std::function<void(QVariant, QString err, bool final)>  IncrementalCollectionCallback;
+
+    /**
      * @brief retrieveCollection
      * @param cmd
      * @param callback
      */
     virtual void retrieveCollection(QSharedPointer<ScanCommand> cmd,
                                     CollectionCallback callback);
+
+    /**
+     * @brief retrieveCollection
+     * @param cmd
+     * @param callback
+     */
+    virtual void retrieveCollectionIncrementally(QSharedPointer<ScanCommand> cmd,
+                                                 IncrementalCollectionCallback callback);
 
     /**
      * @brief runCommand - Low level commands execution API
@@ -228,7 +271,8 @@ protected:
 
     void processScanCommand(QSharedPointer<ScanCommand> cmd,
                             CollectionCallback callback,
-                            QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>());
+                            QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>(),
+                            bool incrementalProcessing=false);
 
     void changeCurrentDbNumber(int db);
 
