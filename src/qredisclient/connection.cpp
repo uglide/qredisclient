@@ -262,7 +262,7 @@ void RedisClient::Connection::getDatabaseKeys(std::function<void (const RedisCli
 {
     if (getServerVersion() >= 2.8) {
         QList<QByteArray> rawCmd {
-            "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "100000"
+            "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "10000"
         };
         QSharedPointer<ScanCommand> keyCmd(new ScanCommand(rawCmd, dbIndex));
 
