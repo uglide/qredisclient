@@ -120,7 +120,7 @@ bool RedisClient::SshTransporter::openTcpSocket()
     connect(m_socket, &QxtSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);
     connect(m_socket, &QxtSshTcpSocket::destroyed, this, &RedisClient::SshTransporter::OnSshSocketDestroyed);
 
-    if (!socketWaiter.wait()) {
+    if (!m_socket->isOpen() && !socketWaiter.wait()) {
         emit errorOccurred(QString("SSH connection established, but redis connection failed"));
         return false;
     }
@@ -157,7 +157,16 @@ void RedisClient::SshTransporter::OnSshSocketDestroyed()
 void RedisClient::SshTransporter::reconnect()
 {
     emit logEvent("Reconnect to host");
-    m_loopTimer->stop();
+
+    if (m_loopTimer->isActive())
+        m_loopTimer->stop();
+
+    if (m_socket) {
+        m_socket->close();
+        QObject::disconnect(m_socket, 0, 0, 0);
+        delete m_socket;
+        m_socket = nullptr;
+    }
 
     if (openTcpSocket()) {
         resetDbIndex();

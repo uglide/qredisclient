@@ -35,12 +35,14 @@ bool RedisClient::Connection::connect(bool wait)
         throw Exception("Invalid config detected");
 
     if (m_transporter.isNull())
-        createTransporter();
+        createTransporter();      
 
-    // Create & run transporter    
+
+    // Create & run transporter
     m_transporterThread = QSharedPointer<QThread>(new QThread);
     m_transporterThread->setObjectName("qredisclient::transporter_thread");
     m_transporter->moveToThread(m_transporterThread.data());
+
     QObject::connect(m_transporterThread.data(), &QThread::started,
                      m_transporter.data(), &AbstractTransporter::init);
     QObject::connect(m_transporterThread.data(), &QThread::finished,
@@ -48,32 +50,27 @@ bool RedisClient::Connection::connect(bool wait)
     QObject::connect(m_transporter.data(), &AbstractTransporter::connected,
                      this, &Connection::auth);
 
-    if (!wait) {
+    SignalWaiter waiter(m_config.connectionTimeout());
+
+    if (wait) {
+        waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
+        waiter.addAbortSignal(this, &Connection::authError);
+        waiter.addSuccessSignal(this, &Connection::authOk);
+        QObject::connect(&waiter, &SignalWaiter::aborted, this, [this]() {
+            disconnect();
+        });
+    } else {
         QObject::connect(m_transporter.data(), &AbstractTransporter::errorOccurred,
                          this, [this](const QString& err) {
             qDebug() << "Disconect on error: " << err;
             disconnect();
         });
 
-        SignalWaiter waiter(m_config.connectionTimeout());
-        waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);
-        m_transporterThread->start();
-        qDebug() << "Wait for transporter thread";
-        return waiter.wait();
+        waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);                       
     }
 
-    //wait for connected state
-    SignalWaiter waiter(m_config.connectionTimeout());
-    waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
-    waiter.addAbortSignal(this, &Connection::authError);
-    waiter.addSuccessSignal(this, &Connection::authOk);
     m_transporterThread->start();
-    bool result = waiter.wait();
-
-    if (!result)
-        disconnect();
-
-    return result;
+    return waiter.wait();
 }
 
 bool RedisClient::Connection::isConnected()
@@ -190,7 +187,7 @@ void RedisClient::Connection::runCommand(Command &cmd)
     waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);   
 
     emit addCommandToWorker(cmd);
-    bool result = waiter.wait();   
+    waiter.wait();
 }
 
 bool RedisClient::Connection::waitForIdle(uint timeout)
@@ -257,8 +254,53 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo()
     return m_serverInfo.databases;
 }
 
-void RedisClient::Connection::getDatabaseKeys(std::function<void (const RedisClient::Connection::RawKeysList &, const QString &)> callback,
-                                              const QString &pattern, uint dbIndex)
+void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const QString &pattern)
+{
+    if (mode() != Mode::Cluster) {
+        throw Exception("Connection is not in cluster mode");
+    }
+
+    QSharedPointer<RawKeysList> result(new RawKeysList());
+    QSharedPointer<HostList> masterNodes(new HostList(getMasterNodes()));
+
+    m_wrapper = [this, result, masterNodes, callback, pattern](const RawKeysList &res, const QString& err){
+        if (!err.isEmpty()) {
+            qDebug() << "Error in cluster keys retrival:" << err;
+            return callback(RawKeysList(), err);
+        }
+
+        result->append(res);
+
+        if (masterNodes->size() > 0) {
+            Host h = masterNodes->first();
+            masterNodes->removeFirst();
+
+            SignalWaiter waiter(m_config.connectionTimeout());
+            waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::connected);
+            waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
+
+            reconnectTo(h.first, h.second);
+
+            qDebug() << "Wait for reconnect...";
+
+            if (!waiter.wait()) {
+                qDebug() << "Reconnection failed";
+                return callback(RawKeysList(),
+                                QString("Cannot connect to cluster node %1:%2").arg(h.first).arg(h.second));
+            }
+
+            qDebug() << "Reconnected!";
+
+            return getDatabaseKeys(m_wrapper, pattern);
+        } else {
+            return callback(*result, QString());
+        }
+    };
+
+    getDatabaseKeys(m_wrapper, pattern);
+}
+
+void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback, const QString &pattern, uint dbIndex)
 {
     if (getServerVersion() >= 2.8) {
         QList<QByteArray> rawCmd {
@@ -269,9 +311,11 @@ void RedisClient::Connection::getDatabaseKeys(std::function<void (const RedisCli
         retrieveCollection(keyCmd, [this, callback](QVariant r, QString err)
         {
             if (!err.isEmpty())
-                return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
+                return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));            
 
-            return callback(convertQVariantList(r.toList()), QString());
+            auto keysList = convertQVariantList(r.toList());
+
+            return callback(keysList, QString());
         });
 
     } else {
@@ -280,7 +324,10 @@ void RedisClient::Connection::getDatabaseKeys(std::function<void (const RedisCli
             if (!err.isEmpty())
                 return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
 
-            return callback(convertQVariantList(r.getValue().toList()), QString());
+
+            auto keysList = convertQVariantList(r.getValue().toList());
+
+            return callback(keysList, QString());
         }, dbIndex);
     }
 }
@@ -370,6 +417,44 @@ void RedisClient::Connection::changeCurrentDbNumber(int db)
     }
 }
 
+RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes()
+{
+    HostList result;
+
+    if (mode() != Mode::Cluster) {
+        return result;
+    }
+
+    Response r;
+
+    try {
+        r = internalCommandSync({"CLUSTER", "NODES"});
+    } catch (const Exception& e) {
+        emit error(QString("Cannot retrive nodes list").arg(e.what()));
+        return result;
+    }
+
+    QStringList lines = r.getValue().toString().split("\n");
+
+    foreach (QString line, lines) {
+        QStringList parts = line.split(" ");
+
+        if (parts.size() < 3)
+            continue;
+
+        int indexOfSep = parts[1].indexOf(":");
+
+        if (indexOfSep == -1 || parts[2] != "master")
+            continue;
+
+        result.append({parts[1].mid(0, indexOfSep),
+                       parts[1].mid(indexOfSep+1).toInt()});
+
+    }
+
+    return result;
+}
+
 void RedisClient::Connection::auth()
 {
     emit log("AUTH");
@@ -387,12 +472,14 @@ void RedisClient::Connection::auth()
             return;
         }
 
-        Response infoResult = internalCommandSync({"INFO"});
+        Response infoResult = internalCommandSync({"INFO", "ALL"});
         m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
 
         // TODO(u_glide): add option to disable automatic mode switching
-        if (m_serverInfo.clusterMode)
+        if (m_serverInfo.clusterMode) {
             m_currentMode = Mode::Cluster;
+            emit log("Cluster detected");
+        }
 
         emit log("AUTH OK");
         emit authOk();
@@ -447,6 +534,11 @@ RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
                 0.0 : versionRegex.cap(1).toDouble();
     result.clusterMode = (modeRegex.indexIn(info) != -1
             && modeRegex.cap(1) == "cluster");
+
+    if (result.clusterMode) {
+        result.databases.insert(0, 0);
+        return result;
+    }
 
     // Parse keyspace info
     QRegularExpression getDbAndKeysCount("^db(\\d+):keys=(\\d+).*");

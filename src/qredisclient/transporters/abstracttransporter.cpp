@@ -8,6 +8,7 @@ RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *c
 {
     //connect signals & slots between connection & transporter
     connect(connection, SIGNAL(addCommandToWorker(Command)), this, SLOT(addCommand(Command)));    
+    connect(connection, SIGNAL(reconnectTo(const QString&, int)), this, SLOT(reconnectTo(const QString&, int)));
     connect(this, SIGNAL(logEvent(const QString&)), connection, SIGNAL(log(const QString&)));
 
     connect(this, &AbstractTransporter::errorOccurred, this, &AbstractTransporter::cancelRunningCommands);
@@ -227,6 +228,8 @@ void RedisClient::AbstractTransporter::logResponse(const RedisClient::Response& 
     emit logEvent(QString("%1 > Response received : %2")
                   .arg(m_connection->getConfig().name())                  
                   .arg(result));
+
+    //qDebug() << "Response:" << response.source();
 }
 
 void RedisClient::AbstractTransporter::processClusterRedirect(QSharedPointer<RunningCommand> runningCommand,
@@ -235,13 +238,26 @@ void RedisClient::AbstractTransporter::processClusterRedirect(QSharedPointer<Run
     Q_ASSERT(runningCommand);
     qDebug() << "Cluster redirect";
 
-    auto config = m_connection->getConfig();
-    config.setHost(response.getRedirectionHost());
-    config.setPort(response.getRedirectionPort());
-    m_connection->setConnectionConfig(config);
-
     m_commands.prepend(runningCommand->cmd);
     runningCommand.clear();
+    m_loopTimer->stop();
+
+    QString host = response.getRedirectionHost();
+    int port = response.getRedirectionPort();
+
+    QTimer::singleShot(1, this, [this, host, port]() {
+        reconnectTo(host, port);
+    });
+}
+
+void RedisClient::AbstractTransporter::reconnectTo(const QString &host, int port)
+{
+    qDebug() << "ReConnect to:" << host << port;
+
+    auto config = m_connection->getConfig();
+    config.setHost(host);
+    config.setPort(port);
+    m_connection->setConnectionConfig(config);
 
     reconnect();
 }

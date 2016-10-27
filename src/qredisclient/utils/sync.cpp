@@ -51,6 +51,7 @@ void RedisClient::SignalWaiter::abort()
     m_result=false;
     m_resultReceived = true;
     m_loop.quit();
+    emit aborted();
 }
 
 void RedisClient::SignalWaiter::success()
@@ -58,4 +59,5 @@ void RedisClient::SignalWaiter::success()
     m_result=true;
     m_resultReceived = true;
     m_loop.quit();
+    emit succeed();
 }

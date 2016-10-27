@@ -46,7 +46,7 @@ void RedisClient::Response::reset()
     m_result.clear();
 }
 
-QByteArray RedisClient::Response::source()
+QByteArray RedisClient::Response::source() const
 {
     return m_responseSource;
 }

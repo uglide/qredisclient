@@ -45,6 +45,10 @@ public:
         connect(sender, signal, this, &SignalWaiter::success);
     }
 
+signals:
+    void succeed();
+    void aborted();
+
 protected slots:
     void abort();
     void success();

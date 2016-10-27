@@ -40,6 +40,8 @@ class QxtSshChannel  : public QIODevice {
     Q_OBJECT
 public:
     virtual ~QxtSshChannel();
+
+    void close();
 protected:
     QxtSshChannel(QxtSshClient*);
     virtual qint64 readData(char*, qint64);

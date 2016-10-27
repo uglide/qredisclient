@@ -65,6 +65,18 @@ QxtSshChannel::QxtSshChannel(QxtSshClient * parent)
  */
 QxtSshChannel::~QxtSshChannel()
 {
+    delete d;
+}
+
+void QxtSshChannel::close()
+{
+    if (isOpen() && d->d_channel) {
+        libssh2_channel_send_eof(d->d_channel);
+        libssh2_channel_close(d->d_channel);
+        d->d_state = 0;
+    }
+
+    QIODevice::close();
 }
 
 QxtSshChannelPrivate::QxtSshChannelPrivate(QxtSshChannel *_p,QxtSshClient * c)

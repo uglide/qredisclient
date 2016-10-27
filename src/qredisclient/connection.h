@@ -147,6 +147,7 @@ public:
      * @brief RawKeysList
      */
     typedef QList<QByteArray> RawKeysList;
+    typedef std::function<void(const RawKeysList&, const QString&)> RawKeysListCallback;
 
     /**
      * @brief getDatabaseKeys - async keys loading
@@ -154,10 +155,17 @@ public:
      * @param pattern
      * @param dbIndex
      */
-    virtual void getDatabaseKeys(
-            std::function<void(const RawKeysList&, const QString&)> callback,
-            const QString& pattern=QString("*"), uint dbIndex = 0
-            );
+    virtual void getDatabaseKeys(RawKeysListCallback callback,
+                                 const QString& pattern=QString("*"),
+                                 uint dbIndex = 0);
+
+    /**
+     * @brief getClusterKeys - async keys loading from all cluster nodes
+     * @param callback
+     * @param pattern
+     */
+    virtual void getClusterKeys(RawKeysListCallback callback,
+                                const QString &pattern);
 
     /*
      * Command execution API
@@ -263,6 +271,9 @@ signals:
     void authOk();
     void authError(const QString&);
 
+    // Cluster
+    void reconnectTo(const QString& host, int port);
+
 protected:
     void createTransporter();
     bool isTransporterRunning();
@@ -275,6 +286,10 @@ protected:
                             bool incrementalProcessing=false);
 
     void changeCurrentDbNumber(int db);
+
+    typedef QPair<QString, int> Host;
+    typedef QList<Host> HostList;
+    HostList getMasterNodes();
 
 protected slots:
     void auth();
@@ -289,5 +304,6 @@ protected:
     Mode m_currentMode;
     QMutex m_dbNumberMutex;
     bool m_autoConnect;
+    RawKeysListCallback m_wrapper;
 };
 }

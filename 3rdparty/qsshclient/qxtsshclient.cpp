@@ -191,8 +191,7 @@ void QxtSshClient::resetState()
  */
 void QxtSshClient::disconnectFromHost() {
     d->d_tearDown();
-    d->abort();
-    //d->d_reset();
+    d->abort();    
 }
 
 /*!
@@ -569,6 +568,9 @@ void QxtSshClientPrivate::d_readyRead(){
     }else if(d_state==6){
         QList<QxtSshChannel*>::const_iterator i;
         for (i = d_channels.constBegin(); i != d_channels.constEnd(); ++i){
+            if (!(*i)->d)
+                continue;
+
             bool ret=(*i)->d->activate();
             if(!ret){
                 d_getLastError();

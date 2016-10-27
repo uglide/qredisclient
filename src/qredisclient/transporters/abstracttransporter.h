@@ -32,7 +32,7 @@ signals:
     void logEvent(const QString&);
     void connected();
     void commandAdded();
-    void queueIsEmpty();
+    void queueIsEmpty();    
 
 public slots:
     virtual void init();
@@ -44,6 +44,7 @@ public slots:
 protected slots:
     virtual void executionTimeout();
     virtual void reconnect() = 0;
+    virtual void reconnectTo(const QString& host, int port);
     virtual void processCommandQueue();
     virtual void runProcessingLoop();
     virtual void cancelRunningCommands(const QString& error);

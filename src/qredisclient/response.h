@@ -23,7 +23,7 @@ public:
 
     QVariant getValue();        
     Type getType() const;
-    QByteArray source();
+    QByteArray source() const;
     QString toRawString() const;
 
     bool isEmpty() const;
