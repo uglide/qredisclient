@@ -315,12 +315,12 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value, int
     else if (value.type() == QVariant::StringList)
     {
         int index = 1;
-        for (QString line : value.toStringList()) {
+        for (QVariant line : value.toList()) {
             result.append(
                 QString("%1 %2) %3\r\n")
                         .arg(indent)
                         .arg(QString::number(index++))
-                        .arg(QString("\"%1\"").arg(line))
+                        .arg(QString("\"%1\"").arg(printableString(line.toByteArray())))
                         );
         }
     }
@@ -341,7 +341,7 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value, int
     }
     else
     {
-        result = QString("\"%1\"").arg(value.toString());
+        result = QString("\"%1\"").arg(printableString(value.toByteArray()));
     }
 
     return indent + result;
