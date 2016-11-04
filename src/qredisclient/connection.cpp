@@ -479,6 +479,38 @@ void RedisClient::Connection::auth()
         if (m_serverInfo.clusterMode) {
             m_currentMode = Mode::Cluster;
             emit log("Cluster detected");
+        } else if (m_serverInfo.sentinelMode) {
+            m_currentMode = Mode::Sentinel;
+            emit log("Sentinel detected. Requesting master node...");
+
+            Response mastersResult = internalCommandSync({"SENTINEL", "masters"});
+
+            if (!mastersResult.isArray()) {
+                emit error(QString("Connection error: cannot retrive master node from sentinel"));
+                return;
+            }
+
+            QVariantList result = mastersResult.getValue().toList();
+
+            if (result.size() == 0) {
+                emit error(QString("Connection error: invalid response from sentinel"));
+                return;
+            }
+
+            QStringList masterInfo = result.at(0).toStringList();
+
+            if (masterInfo.size() < 6) {
+                emit error(QString("Connection error: invalid response from sentinel"));
+                return;
+            }
+
+            QString host = masterInfo[3];
+
+            if (!m_config.useSshTunnel() && (host == "127.0.0.1" || host == "localhost"))
+                host = m_config.host();
+
+            emit reconnectTo(host, masterInfo[5].toInt());
+            return;
         }
 
         emit log("AUTH OK");
@@ -501,6 +533,14 @@ void RedisClient::Connection::setTransporter(QSharedPointer<RedisClient::Abstrac
 QSharedPointer<RedisClient::AbstractTransporter> RedisClient::Connection::getTransporter() const
 {
     return m_transporter;
+}
+
+RedisClient::ServerInfo::ServerInfo()
+    : version(0.0),
+      clusterMode(false),
+      sentinelMode(false)
+{
+
 }
 
 RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
@@ -532,11 +572,18 @@ RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
     result.parsed = parsed;
     result.version = (versionRegex.indexIn(info) == -1)?
                 0.0 : versionRegex.cap(1).toDouble();
-    result.clusterMode = (modeRegex.indexIn(info) != -1
-            && modeRegex.cap(1) == "cluster");
+
+    if (modeRegex.indexIn(info) != -1) {
+        if (modeRegex.cap(1) == "cluster")
+            result.clusterMode = true;
+        if (modeRegex.cap(1) == "sentinel")
+            result.sentinelMode = true;
+    }
 
     if (result.clusterMode) {
         result.databases.insert(0, 0);
+        return result;
+    } else if (result.sentinelMode) {
         return result;
     }
 
@@ -561,4 +608,27 @@ RedisClient::ServerInfo RedisClient::ServerInfo::fromString(const QString &info)
     }
 
     return result;
+}
+
+QVariantMap RedisClient::ServerInfo::ParsedServerInfo::toVariantMap()
+{
+    QVariantMap categories;
+    QHashIterator<QString,  QHash<QString, QString>> catIterator(*this);
+
+    while (catIterator.hasNext())
+    {
+        catIterator.next();
+        QHashIterator<QString, QString> propIterator(catIterator.value());
+        QVariantMap properties;
+
+        while (propIterator.hasNext())
+        {
+            propIterator.next();
+            properties.insert(propIterator.key(), propIterator.value());
+        }
+
+        categories.insert(catIterator.key(), properties);
+    }
+
+    return categories;
 }

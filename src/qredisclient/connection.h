@@ -28,35 +28,17 @@ typedef QMap<int, int> DatabaseList;
  */
 struct ServerInfo
 {
+    ServerInfo();
+
     double version;
     bool clusterMode;
-    DatabaseList databases;
+    bool sentinelMode;
+    DatabaseList databases;    
 
     class ParsedServerInfo : public QHash<QString, QHash<QString, QString>>
     {
     public:
-        QVariantMap toVariantMap()
-        {
-            QVariantMap categories;
-            QHashIterator<QString,  QHash<QString, QString>> catIterator(*this);
-
-            while (catIterator.hasNext())
-            {
-                catIterator.next();
-                QHashIterator<QString, QString> propIterator(catIterator.value());
-                QVariantMap properties;
-
-                while (propIterator.hasNext())
-                {
-                    propIterator.next();
-                    properties.insert(propIterator.key(), propIterator.value());
-                }
-
-                categories.insert(catIterator.key(), properties);
-            }
-
-            return categories;
-        }
+        QVariantMap toVariantMap();
     };
 
     ParsedServerInfo parsed;
@@ -76,7 +58,7 @@ class Connection : public QObject
     friend class AbstractTransporter;
 
 public:
-    enum class Mode { Normal, PubSub, Cluster };
+    enum class Mode { Normal, PubSub, Cluster, Sentinel };
     class InvalidModeException : public Connection::Exception {};
 public:
     /**
@@ -166,6 +148,16 @@ public:
      */
     virtual void getClusterKeys(RawKeysListCallback callback,
                                 const QString &pattern);
+
+
+    typedef QPair<QString, int> Host;
+    typedef QList<Host> HostList;
+
+    /**
+     * @brief getMasterNodes - Get master nodes of cluster
+     * @return HostList
+     */
+    HostList getMasterNodes();
 
     /*
      * Command execution API
@@ -271,7 +263,7 @@ signals:
     void authOk();
     void authError(const QString&);
 
-    // Cluster
+    // Cluster & Sentinel
     void reconnectTo(const QString& host, int port);
 
 protected:
@@ -285,11 +277,7 @@ protected:
                             QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>(),
                             bool incrementalProcessing=false);
 
-    void changeCurrentDbNumber(int db);
-
-    typedef QPair<QString, int> Host;
-    typedef QList<Host> HostList;
-    HostList getMasterNodes();
+    void changeCurrentDbNumber(int db);    
 
 protected slots:
     void auth();
