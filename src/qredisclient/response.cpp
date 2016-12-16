@@ -324,7 +324,7 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value, int
                         );
         }
     }
-    else if (value.type() == QVariant::QVariantList || value.canConvert(QVariant::QVariantList))
+    else if (value.type() == QVariant::List || value.canConvert(QVariant::List))
     {
         QVariantList list = value.value<QVariantList>();
 
