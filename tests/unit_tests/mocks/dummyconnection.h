@@ -9,10 +9,12 @@ class DummyConnection : public RedisClient::Connection
 public:
     DummyConnection(double version=2.6, bool raise_error=false)
         : RedisClient::Connection(RedisClient::ConnectionConfig()),
-          runCommandCalled(0), retrieveCollectionCalled(0),
-          getServerVersionCalled(0), m_version(version), 
-          m_raiseExceptionOnConnect(raise_error),
-          returnErrorOnCmdRun(false)
+          runCommandCalled(0),
+          retrieveCollectionCalled(0),
+          getServerVersionCalled(0),
+          returnErrorOnCmdRun(false),
+          m_version(version),
+          m_raiseExceptionOnConnect(raise_error)
     {
     }
 

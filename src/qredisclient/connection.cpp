@@ -371,6 +371,11 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
             return;
         }
 
+        if (!error.isEmpty()) {
+            callback(QVariant(), error);
+            return;
+        }
+
         if (incrementalProcessing)
             result->clear();
 
