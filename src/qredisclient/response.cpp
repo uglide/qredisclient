@@ -244,7 +244,7 @@ bool RedisClient::Response::isMessage() const
 
     QVariantList result = m_result->toList();
 
-    return result.size() == 3 && result[0] == "message";
+    return result.size() >= 3 && (result[0] == "message" || result[0] == "pmessage");
 }
 
 bool RedisClient::Response::isArray() const

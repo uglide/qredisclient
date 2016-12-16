@@ -88,6 +88,15 @@ void RedisClient::Connection::disconnect()
     m_dbNumber = 0;
 }
 
+void RedisClient::Connection::command(const RedisClient::Command &cmd)
+{
+    try {
+        this->runCommand(cmd);
+    } catch (RedisClient::Connection::Exception& e) {
+        throw Exception("Cannot execute command." + QString(e.what()));
+    }
+}
+
 void RedisClient::Connection::command(QList<QByteArray> rawCmd, int db)
 {
     Command cmd(rawCmd, db);
@@ -159,7 +168,7 @@ RedisClient::Response RedisClient::Connection::commandSync(const Command& comman
     return r;
 }
 
-void RedisClient::Connection::runCommand(Command &cmd)
+void RedisClient::Connection::runCommand(const Command &cmd)
 {
     if (!cmd.isValid())
         throw Exception("Command is not valid");

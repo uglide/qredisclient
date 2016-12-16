@@ -238,7 +238,7 @@ public:
      * @brief runCommand - Low level commands execution API
      * @param cmd
      */
-    virtual void runCommand(Command &cmd);
+    virtual void runCommand(const Command &cmd);
 
 
     /**
@@ -255,7 +255,7 @@ public:
     QSharedPointer<AbstractTransporter> getTransporter() const;
 
 signals:    
-    void addCommandToWorker(Command);
+    void addCommandToWorker(const Command&);
     void error(const QString&);
     void log(const QString&);
     void connected();

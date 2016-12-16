@@ -7,7 +7,7 @@ RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *c
     : m_connection(connection)
 {
     //connect signals & slots between connection & transporter
-    connect(connection, SIGNAL(addCommandToWorker(Command)), this, SLOT(addCommand(Command)));    
+    connect(connection, SIGNAL(addCommandToWorker(const Command&)), this, SLOT(addCommand(const Command&)));
     connect(connection, SIGNAL(reconnectTo(const QString&, int)), this, SLOT(reconnectTo(const QString&, int)));
     connect(this, SIGNAL(logEvent(const QString&)), connection, SIGNAL(log(const QString&)));
 
@@ -37,7 +37,7 @@ void RedisClient::AbstractTransporter::init()
     connectToHost();
 }
 
-void RedisClient::AbstractTransporter::addCommand(Command cmd)
+void RedisClient::AbstractTransporter::addCommand(const Command& cmd)
 {
     if (cmd.isHiPriorityCommand())
         m_commands.prepend(cmd);
