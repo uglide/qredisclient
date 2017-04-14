@@ -7,7 +7,6 @@ env:
   - RDM_QT_VERSION=58
   - RDM_QT_VERSION=571
   - RDM_QT_VERSION=562
-  - RDM_QT_VERSION=551
   - RDM_QT_VERSION=542
 install:
 - sudo apt-key update
@@ -37,9 +36,9 @@ install:
 - gcc --version
 - gcov --version
 script: 
-  - if [ "$RDM_QT_VERSION" == "561" ]; then cd ./tests/unit_tests && ./run_tests; fi
+  - if [ "$RDM_QT_VERSION" == "562" ]; then cd ./tests/unit_tests && ./run_tests; fi
   - qmake && make
 after_success:
-  - if [ "$RDM_QT_VERSION" == "561" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
+  - if [ "$RDM_QT_VERSION" == "562" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
 services:
   - redis-server
