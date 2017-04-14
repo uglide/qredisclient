@@ -4,7 +4,8 @@ dist: trusty
 compiler:
   - gcc
 env:
-  - RDM_QT_VERSION=57
+  - RDM_QT_VERSION=58
+  - RDM_QT_VERSION=571
   - RDM_QT_VERSION=562
   - RDM_QT_VERSION=551
   - RDM_QT_VERSION=542
