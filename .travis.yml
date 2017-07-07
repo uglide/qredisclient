@@ -4,7 +4,7 @@ dist: trusty
 compiler:
   - gcc
 env:
-  - RDM_QT_VERSION=58
+  - RDM_QT_VERSION=591
   - RDM_QT_VERSION=571
   - RDM_QT_VERSION=562
   - RDM_QT_VERSION=542
@@ -18,7 +18,7 @@ install:
 - sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake -y -qq
 - git clone https://github.com/libssh2/libssh2.git libssh2
 - cd libssh2
-- git checkout libssh2-1.6.0
+- git checkout libssh2-1.8.0
 - mkdir bin && cd bin
 - cmake -DCRYPTO_BACKEND=OpenSSL -DENABLE_ZLIB_COMPRESSION=ON ..
 - cmake --build .
@@ -36,9 +36,9 @@ install:
 - gcc --version
 - gcov --version
 script: 
-  - if [ "$RDM_QT_VERSION" == "562" ]; then cd ./tests/unit_tests && ./run_tests; fi
+  - if [ "$RDM_QT_VERSION" == "591" ]; then cd ./tests/unit_tests && ./run_tests; fi
   - qmake && make
 after_success:
-  - if [ "$RDM_QT_VERSION" == "562" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
+  - if [ "$RDM_QT_VERSION" == "591" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
 services:
   - redis-server
