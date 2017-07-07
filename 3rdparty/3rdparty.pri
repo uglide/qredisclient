@@ -47,7 +47,7 @@ win32-msvc* {
       WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.$$WIN_DEPS_SSL_VERSION/build/native/lib/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/dynamic
     } 
     
-    LIBS += $$WIN_DEPS_PATH -L$$WIN_DEPS_PATH2 -L$$WIN_DEPS_PATH3 -llibssh2 -llibeay32 -lssleay32 -lgdi32 -lws2_32 -lkernel32 -luser32 -lshell32 -luuid -lole32 -ladvapi32
+    LIBS += $$WIN_DEPS_PATH -L$$WIN_DEPS_PATH2 -L$$WIN_DEPS_PATH3 -llibssh2 -llibssl -llibcrypto -lgdi32 -lws2_32 -lkernel32 -luser32 -lshell32 -luuid -lole32 -ladvapi32
 } else {    
    exists( /usr/local/lib/libssh2.a ) {
       LIBS += /usr/local/lib/libssh2.a -lz -lssl -lcrypto
