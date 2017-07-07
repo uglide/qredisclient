@@ -5,7 +5,6 @@ compiler:
   - gcc
 env:
   - RDM_QT_VERSION=591
-  - RDM_QT_VERSION=571
   - RDM_QT_VERSION=562
   - RDM_QT_VERSION=542
 install:
