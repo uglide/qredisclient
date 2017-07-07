@@ -18,6 +18,6 @@ build_script:
 - nmake /S /NOLOGO
 test_script:
 - cd tests/unit_tests
-- qmake DEFINES+=INTEGRATION_TESTS DESTDIR=%cd%/bin 
+- qmake "DEFINES+=INTEGRATION_TESTS" "DEFINES+=OPENSSL_STATIC" DESTDIR=%cd%/bin 
 - nmake /S /NOLOGO
-- '%cd%/bin/tests -txt'
+- %cd%/bin/tests -txt
