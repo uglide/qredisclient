@@ -24,6 +24,8 @@ win32-msvc* {
         error("Your msvc version is not suppoted. qredisclient requires msvc2015")
     }
     
+    QMAKE_LFLAGS += /VERBOSE /VERBOSE:LIB /VERBOSE:REF
+    
     WIN_DEPS_PLATFORM = Win32
     WIN_DEPS_ZLIB_VERSION = 1.2.8.7
     WIN_DEPS_SSL_VERSION = 1.1.0.3
