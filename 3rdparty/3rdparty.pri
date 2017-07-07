@@ -21,31 +21,32 @@ win32-msvc* {
         message("msvc2015 detected")
         WIN_DEPS_VERSION = v140
     } else {
-        error("Your msvc version is not suppoted. qredisclient requires msvc2015+")
+        error("Your msvc version is not suppoted. qredisclient requires msvc2015")
     }
-
-    INCLUDEPATH += $$PWD/windows/rmt_libssh2.1.8.0/build/native/include/
-
+    
+    WIN_DEPS_PLATFORM = Win32
+    WIN_DEPS_ZLIB_VERSION = 1.2.8.7
+    WIN_DEPS_SSL_VERSION = 1.1.0.3
+    WIN_DEPS_LIBSSH_VERSION = 1.8.0
+    WIN_DEPS_LIBSSH_BASE_PATH = $$PWD/windows/rmt_libssh2.$$WIN_DEPS_LIBSSH_VERSION/build/native/
+    
     CONFIG(release, debug|release) {
-        WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.7/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static/zlibstat.lib
-        WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.8.0/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
-
-        defined(OPENSSL_STATIC) {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
-        } else {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/dynamic
-        }
+        WIN_DEPS_TYPE = Release
     } else: CONFIG(debug, debug|release) {
-        WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.7/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static/zlibstat.lib
-        WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.8.0/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
-
-        defined(OPENSSL_STATIC) {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
-        } else {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/dynamic
-        }
+        WIN_DEPS_TYPE = Debug
     }
+    
+    INCLUDEPATH += $$WIN_DEPS_LIBSSH_BASE_PATH/include/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/static/
+    
+    WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.$$WIN_DEPS_ZLIB_VERSION/build/native/lib/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/static/zlibstat.lib
+    WIN_DEPS_PATH2 = $$WIN_DEPS_LIBSSH_BASE_PATH/lib/$$WIN_DEPS_VERSION/Win32/Release/static
 
+    defined(OPENSSL_STATIC) {
+      WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.$$WIN_DEPS_SSL_VERSION/build/native/lib/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/static
+    } else {
+      WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.$$WIN_DEPS_SSL_VERSION/build/native/lib/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/dynamic
+    } 
+    
     LIBS += $$WIN_DEPS_PATH -L$$WIN_DEPS_PATH2 -L$$WIN_DEPS_PATH3 -llibssh2 -llibeay32 -lssleay32 -lgdi32 -lws2_32 -lkernel32 -luser32 -lshell32 -luuid -lole32 -ladvapi32
 } else {    
    exists( /usr/local/lib/libssh2.a ) {
