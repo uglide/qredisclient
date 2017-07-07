@@ -6,7 +6,9 @@ install:
 - set QTDIR=C:\Qt\5.9\msvc2015
 - set PATH=%QTDIR%\bin;%PATH%
 - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
-- nuget install -Version 1.8.0 -OutputDirectory ./3rdparty/windows rmt_libssh2
+- cd %cd%/src
+- configure.bat
+- cd ..
 - nuget install redis-64 -excludeversion
 - qmake -v
 - redis-64\tools\redis-server.exe --service-install
