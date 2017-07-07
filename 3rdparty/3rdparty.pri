@@ -24,25 +24,25 @@ win32-msvc* {
         error("Your msvc version is not suppoted. qredisclient requires msvc2015+")
     }
 
-    INCLUDEPATH += $$PWD/windows/rmt_libssh2.1.6.0.2/build/native/include/
+    INCLUDEPATH += $$PWD/windows/rmt_libssh2.1.8.0/build/native/include/
 
     CONFIG(release, debug|release) {
-        WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static/zlibstat.lib
-        WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.6.0.2/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
+        WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.7/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static/zlibstat.lib
+        WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.8.0/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
 
         defined(OPENSSL_STATIC) {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/static
         } else {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/dynamic
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Release/dynamic
         }
     } else: CONFIG(debug, debug|release) {
-        WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static/zlibstat.lib
-        WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.6.0.2/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
+        WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.1.2.8.7/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static/zlibstat.lib
+        WIN_DEPS_PATH2 = $$PWD/windows/rmt_libssh2.1.8.0/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
 
         defined(OPENSSL_STATIC) {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/static
         } else {
-            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.0.2.5/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/dynamic
+            WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.1.1.0.3/build/native/lib/$$WIN_DEPS_VERSION/Win32/Debug/dynamic
         }
     }
 
