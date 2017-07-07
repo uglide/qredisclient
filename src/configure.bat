@@ -8,5 +8,5 @@ if exist nuget.exe (
 )
 
 echo Install deps with nuget
-nuget install -Version 1.6.0.2 -OutputDirectory ./../3rdparty/windows rmt_libssh2
+nuget install -Version 1.8.0 -OutputDirectory ./../3rdparty/windows rmt_libssh2
 

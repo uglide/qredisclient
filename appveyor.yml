@@ -3,10 +3,12 @@ version: 0.0.{build}
 clone_depth: 5
 install:
 - git submodule update --init --recursive
-- set QTDIR=C:\Qt\5.6\msvc2015
+- set QTDIR=C:\Qt\5.9\msvc2015
 - set PATH=%QTDIR%\bin;%PATH%
 - call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat"
-- nuget install -Version 1.6.0.2 -OutputDirectory ./3rdparty/windows rmt_libssh2
+- cd %cd%/src
+- configure.bat
+- cd ..
 - nuget install redis-64 -excludeversion
 - qmake -v
 - redis-64\tools\redis-server.exe --service-install
@@ -15,7 +17,8 @@ build_script:
 - qmake CONFIG+=release DESTDIR=%cd%/build
 - nmake /S /NOLOGO
 test_script:
+- set PATH=%cd%\3rdparty\windows\rmt_openssl.1.1.0.3\build\native\bin\v140\Win32\Debug\dynamic\;%PATH%
 - cd tests/unit_tests
-- qmake DEFINES+=INTEGRATION_TESTS DESTDIR=%cd%/bin 
+- qmake "DEFINES+=INTEGRATION_TESTS" DESTDIR=%cd%/bin 
 - nmake /S /NOLOGO
 - '%cd%/bin/tests -txt'
