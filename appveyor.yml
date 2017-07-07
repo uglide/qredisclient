@@ -17,7 +17,8 @@ build_script:
 - qmake CONFIG+=release DESTDIR=%cd%/build
 - nmake /S /NOLOGO
 test_script:
+- set PATH=%cd%\3rdparty\windows\rmt_openssl.1.1.0.3\build\native\bin\v140\Win32\Debug\dynamic\;%PATH%
 - cd tests/unit_tests
-- qmake "DEFINES+=INTEGRATION_TESTS" "DEFINES+=OPENSSL_STATIC" DESTDIR=%cd%/bin 
+- qmake "DEFINES+=INTEGRATION_TESTS" DESTDIR=%cd%/bin 
 - nmake /S /NOLOGO
 - '%cd%/bin/tests -txt'
