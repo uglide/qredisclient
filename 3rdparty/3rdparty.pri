@@ -27,7 +27,7 @@ win32-msvc* {
     WIN_DEPS_PLATFORM = Win32
     WIN_DEPS_ZLIB_VERSION = 1.2.8.7
     WIN_DEPS_SSL_VERSION = 1.1.0.3
-    WIN_DEPS_LIBSSH_VERSION = 1.8.0
+    WIN_DEPS_LIBSSH_VERSION = 1.8.0.0
     WIN_DEPS_LIBSSH_BASE_PATH = $$PWD/windows/rmt_libssh2.$$WIN_DEPS_LIBSSH_VERSION/build/native/
     
     CONFIG(release, debug|release) {
