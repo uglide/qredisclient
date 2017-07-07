@@ -24,8 +24,6 @@ win32-msvc* {
         error("Your msvc version is not suppoted. qredisclient requires msvc2015")
     }
     
-    QMAKE_LFLAGS += /VERBOSE /VERBOSE:LIB /VERBOSE:REF
-    
     WIN_DEPS_PLATFORM = Win32
     WIN_DEPS_ZLIB_VERSION = 1.2.8.7
     WIN_DEPS_SSL_VERSION = 1.1.0.3
@@ -41,7 +39,7 @@ win32-msvc* {
     INCLUDEPATH += $$WIN_DEPS_LIBSSH_BASE_PATH/include/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/static/
     
     WIN_DEPS_PATH = $$PWD/windows/rmt_zlib.$$WIN_DEPS_ZLIB_VERSION/build/native/lib/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/static/zlibstat.lib
-    WIN_DEPS_PATH2 = $$WIN_DEPS_LIBSSH_BASE_PATH/lib/$$WIN_DEPS_VERSION/Win32/Release/static
+    WIN_DEPS_PATH2 = $$WIN_DEPS_LIBSSH_BASE_PATH/lib/$$WIN_DEPS_VERSION/Win32/$$WIN_DEPS_TYPE/static
 
     defined(OPENSSL_STATIC) {
       WIN_DEPS_PATH3 = $$PWD/windows/rmt_openssl.$$WIN_DEPS_SSL_VERSION/build/native/lib/$$WIN_DEPS_VERSION/$$WIN_DEPS_PLATFORM/$$WIN_DEPS_TYPE/static
