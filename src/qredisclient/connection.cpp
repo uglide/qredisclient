@@ -310,35 +310,21 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const
 }
 
 void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback, const QString &pattern, uint dbIndex)
-{
-    if (getServerVersion() >= 2.8) {
-        QList<QByteArray> rawCmd {
-            "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "10000"
-        };
-        QSharedPointer<ScanCommand> keyCmd(new ScanCommand(rawCmd, dbIndex));
+{    
+    QList<QByteArray> rawCmd {
+        "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "10000"
+    };
+    QSharedPointer<ScanCommand> keyCmd(new ScanCommand(rawCmd, dbIndex));
 
-        retrieveCollection(keyCmd, [this, callback](QVariant r, QString err)
-        {
-            if (!err.isEmpty())
-                return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));            
+    retrieveCollection(keyCmd, [this, callback](QVariant r, QString err)
+    {
+        if (!err.isEmpty())
+            return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
 
-            auto keysList = convertQVariantList(r.toList());
+        auto keysList = convertQVariantList(r.toList());
 
-            return callback(keysList, QString());
-        });
-
-    } else {
-        command({"KEYS", pattern.toUtf8()}, this, [this, callback](RedisClient::Response r, QString err)
-        {
-            if (!err.isEmpty())
-                return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
-
-
-            auto keysList = convertQVariantList(r.getValue().toList());
-
-            return callback(keysList, QString());
-        }, dbIndex);
-    }
+        return callback(keysList, QString());
+    });
 }
 
 void RedisClient::Connection::createTransporter()
