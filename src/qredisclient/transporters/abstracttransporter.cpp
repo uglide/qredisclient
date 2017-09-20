@@ -4,7 +4,7 @@
 #include <QDebug>
 
 RedisClient::AbstractTransporter::AbstractTransporter(RedisClient::Connection *connection)
-    : m_connection(connection)
+    : m_connection(connection), m_reconnectEnabled(true)
 {
     //connect signals & slots between connection & transporter
     connect(connection, SIGNAL(addCommandToWorker(const Command&)), this, SLOT(addCommand(const Command&)));
@@ -97,6 +97,11 @@ void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response&
 
     if (m_runningCommands.size() == 0) {
         qDebug() << "Response recieved but no commands are running";
+
+        if (response.isErrorStateMessage()) {
+            m_reconnectEnabled = false;
+            emit errorOccurred(response.toRawString());
+        }
         return;
     }
 
@@ -148,22 +153,10 @@ void RedisClient::AbstractTransporter::reAddRunningCommandToQueue(QObject *ignor
     }
 }
 
-void RedisClient::AbstractTransporter::cancelRunningCommands(const QString& err)
+void RedisClient::AbstractTransporter::cancelRunningCommands()
 {
     emit logEvent("Cancel running commands");
-
-    for (auto curr = m_runningCommands.end(); curr != m_runningCommands.begin();) {
-        --curr;
-
-        auto rCmd = *curr;
-        if (rCmd->emitter) {
-            rCmd->emitter->sendResponse(Response(), err);
-        }
-
-        curr = m_runningCommands.erase(curr);
-    }
-
-    emit m_connection->error(err);
+    m_runningCommands.clear();
 }
 
 void RedisClient::AbstractTransporter::processCommandQueue()
@@ -314,6 +307,10 @@ void RedisClient::AbstractTransporter::readyRead()
 void RedisClient::AbstractTransporter::runCommand(const RedisClient::Command &command)
 {    
     if (isSocketReconnectRequired()) {
+        if (!m_reconnectEnabled) {
+            qDebug() << "Connection disconnected on error. Ignoring commands.";
+            return;
+        }
         qDebug() << "Cannot run command. Reconnect is required.";
         m_commands.enqueue(command);
         reconnect();

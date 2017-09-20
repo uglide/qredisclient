@@ -16,7 +16,8 @@ RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
     : m_config(c),
       m_dbNumber(0),
       m_currentMode(Mode::Normal),
-      m_autoConnect(autoConnect)
+      m_autoConnect(autoConnect),
+      m_stoppingTransporter(false)
 {            
 }
 
@@ -35,8 +36,7 @@ bool RedisClient::Connection::connect(bool wait)
         throw Exception("Invalid config detected");
 
     if (m_transporter.isNull())
-        createTransporter();      
-
+        createTransporter();         
 
     // Create & run transporter
     m_transporterThread = QSharedPointer<QThread>(new QThread);
@@ -49,23 +49,20 @@ bool RedisClient::Connection::connect(bool wait)
                      m_transporter.data(), &AbstractTransporter::disconnectFromHost);
     QObject::connect(m_transporter.data(), &AbstractTransporter::connected,
                      this, &Connection::auth);
+    QObject::connect(m_transporter.data(), &AbstractTransporter::errorOccurred,
+                     this, [this](const QString& err) {
+        disconnect();
+        emit error(QString("Disconect on error: %1").arg(err));
+    });
+
 
     SignalWaiter waiter(m_config.connectionTimeout());
 
     if (wait) {
         waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
         waiter.addAbortSignal(this, &Connection::authError);
-        waiter.addSuccessSignal(this, &Connection::authOk);
-        QObject::connect(&waiter, &SignalWaiter::aborted, this, [this]() {
-            disconnect();
-        });
-    } else {
-        QObject::connect(m_transporter.data(), &AbstractTransporter::errorOccurred,
-                         this, [this](const QString& err) {
-            qDebug() << "Disconect on error: " << err;
-            disconnect();
-        });
-
+        waiter.addSuccessSignal(this, &Connection::authOk);                    
+    } else {       
         waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);                       
     }
 
@@ -75,15 +72,17 @@ bool RedisClient::Connection::connect(bool wait)
 
 bool RedisClient::Connection::isConnected()
 {
-    return m_transporter && isTransporterRunning();
+    return m_stoppingTransporter == false && isTransporterRunning();
 }
 
 void RedisClient::Connection::disconnect()
 {
     if (isTransporterRunning()) {
+        m_stoppingTransporter = true;
         m_transporterThread->quit();
         m_transporterThread->wait();        
         m_transporter.clear();
+        m_stoppingTransporter = false;
     }
     m_dbNumber = 0;
 }
@@ -153,19 +152,20 @@ RedisClient::Response RedisClient::Connection::commandSync(QString cmd, QString 
 RedisClient::Response RedisClient::Connection::commandSync(const Command& command)
 {
     auto cmd = command;
-    Executor syncObject(cmd);
+    CommandExecutor syncObject(cmd, m_config.executeTimeout());
+    syncObject.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
 
     runCommand(cmd);
 
-    QString error;
-    RedisClient::Response r = syncObject.waitForResult(m_config.executeTimeout(), error);
-    if (r.isEmpty()) {
-        throw Exception("Execution timeout");
-    } else if (!error.isEmpty()) {
-        throw Exception(error);
+    RedisClient::Response resp;
+
+    try {
+        resp = syncObject.waitResult();
+    } catch (CommandExecutor::Exception& e) {
+        throw Exception(e.what());
     }
 
-    return r;
+    return resp;
 }
 
 void RedisClient::Connection::runCommand(const Command &cmd)
@@ -338,10 +338,8 @@ void RedisClient::Connection::createTransporter()
 }
 
 bool RedisClient::Connection::isTransporterRunning()
-{
-    return m_transporter.isNull() == false
-            && m_transporterThread.isNull() == false
-            && m_transporterThread->isRunning();
+{    
+    return m_transporter && m_transporterThread && m_transporterThread->isRunning();
 }
 
 RedisClient::Response RedisClient::Connection::internalCommandSync(QList<QByteArray> rawCmd)

@@ -2,6 +2,7 @@
 
 #include "abstracttransporter.h"
 #include <QSslSocket>
+#include <QMutex>
 
 namespace RedisClient {
 
@@ -37,6 +38,7 @@ private slots:
 
 private:
     QSharedPointer<QSslSocket> m_socket;
+    QMutex m_disconnectLock;
     bool m_errorOccurred;
 };
 }

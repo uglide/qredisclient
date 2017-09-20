@@ -18,7 +18,7 @@
 namespace RedisClient {
 
 class AbstractTransporter;
-class Executor;
+class CommandExecutor;
 
 typedef QMap<int, int> DatabaseList;
 
@@ -291,7 +291,8 @@ protected:
     ServerInfo m_serverInfo;
     Mode m_currentMode;
     QMutex m_dbNumberMutex;
-    bool m_autoConnect;
+    bool m_autoConnect;    
+    bool m_stoppingTransporter;
     RawKeysListCallback m_wrapper;
 };
 }

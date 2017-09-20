@@ -27,6 +27,8 @@ void RedisClient::DefaultTransporter::initSocket()
 
 void RedisClient::DefaultTransporter::disconnectFromHost()
 {
+    QMutexLocker lock(&m_disconnectLock);
+
     if (m_socket.isNull())
         return;
 
@@ -43,7 +45,7 @@ bool RedisClient::DefaultTransporter::isInitialized() const
 
 bool RedisClient::DefaultTransporter::isSocketReconnectRequired() const
 {
-    return m_socket->state() == QAbstractSocket::UnconnectedState;
+    return m_socket && m_socket->state() == QAbstractSocket::UnconnectedState;
 }
 
 bool RedisClient::DefaultTransporter::canReadFromSocket()

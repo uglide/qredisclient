@@ -11,26 +11,13 @@
 namespace RedisClient {
 
 class Command;
-class Connection;
-
-class Executor : public QObject
-{
-    Q_OBJECT
-    friend class Connection;
-private:
-    Executor(Command& cmd);
-    Response waitForResult(unsigned int, QString &err);
-    Response m_result;
-    QEventLoop m_loop;
-    QTimer m_timeoutTimer;
-    QString m_error;
-};
 
 class SignalWaiter : public QObject
 {
     Q_OBJECT
 public:
     SignalWaiter(uint timeout);
+
     bool wait();
 
     template <typename Func1>
@@ -52,10 +39,28 @@ signals:
 protected slots:
     void abort();
     void success();
-private:
+protected:
     QEventLoop m_loop;
-    QTimer m_timeoutTimer;
-    bool m_result;
+    QTimer m_timeoutTimer;   
     bool m_resultReceived;
+private:
+    bool m_result;
 };
+
+class CommandExecutor : public SignalWaiter
+{
+    Q_OBJECT
+    ADD_EXCEPTION
+public:
+    CommandExecutor(Command& cmd, uint timeout);
+
+    Response waitResult();
+
+private:
+    bool wait() { return false; }
+private:
+    Response m_result;
+    QString m_error;
+};
+
 }

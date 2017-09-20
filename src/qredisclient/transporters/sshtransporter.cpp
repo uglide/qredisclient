@@ -34,7 +34,8 @@ void RedisClient::SshTransporter::disconnectFromHost()
 
     QObject::disconnect(m_sshClient.data(), 0, 0, 0);
 
-    m_sshClient->disconnectFromHost();    
+    m_sshClient->disconnectFromHost();
+    m_sshClient.clear();
 }
 
 bool RedisClient::SshTransporter::isInitialized() const
@@ -44,7 +45,7 @@ bool RedisClient::SshTransporter::isInitialized() const
 
 bool RedisClient::SshTransporter::isSocketReconnectRequired() const
 {
-    return !m_socket || !m_socket->isOpen();
+    return m_sshClient && (!m_socket || !m_socket->isOpen());
 }
 
 bool RedisClient::SshTransporter::canReadFromSocket()

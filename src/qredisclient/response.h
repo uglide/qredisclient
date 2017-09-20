@@ -28,6 +28,7 @@ public:
 
     bool isEmpty() const;
     bool isErrorMessage() const;
+    bool isErrorStateMessage() const;
     bool isDisabledCommandErrorMessage() const;
     bool isOkMessage() const;
     bool isValid();

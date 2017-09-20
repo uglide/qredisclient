@@ -353,6 +353,14 @@ bool RedisClient::Response::isErrorMessage() const
             && m_responseSource.startsWith("-ERR");
 }
 
+bool RedisClient::Response::isErrorStateMessage() const
+{
+    return getResponseType(m_responseSource) == Error
+                && (m_responseSource.startsWith("-DENIED")
+                    || m_responseSource.startsWith("-LOADING")
+                    || m_responseSource.startsWith("-MISCONF"));
+}
+
 bool RedisClient::Response::isDisabledCommandErrorMessage() const
 {
     return isErrorMessage() && m_responseSource.contains("unknown command");

@@ -47,7 +47,7 @@ protected slots:
     virtual void reconnectTo(const QString& host, int port);
     virtual void processCommandQueue();
     virtual void runProcessingLoop();
-    virtual void cancelRunningCommands(const QString& error);
+    virtual void cancelRunningCommands();
 
 protected:
     virtual bool isInitialized() const = 0;
@@ -85,6 +85,7 @@ protected:
     QSharedPointer<QTimer> m_loopTimer;
     typedef QHash<QByteArray, QSharedPointer<ResponseEmitter>> Subscriptions;
     Subscriptions m_subscriptions;
+    bool m_reconnectEnabled;
 };
 
 

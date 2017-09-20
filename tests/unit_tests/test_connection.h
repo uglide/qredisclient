@@ -20,6 +20,7 @@ private slots:
 
     void testParseServerInfo();
     void testConfig();
+    void connectWithInvalidConfig();
 
 #ifdef INTEGRATION_TESTS
 
@@ -29,8 +30,7 @@ private slots:
     void connectAndDisconnect();
     void connectToHostAndRunCommand();
     void connectWithAuth();
-    void connectWithInvalidAuth();
-    void connectWithInvalidConfig();
+    void connectWithInvalidAuth();    
 
     void testScanCommand();
     void testRetriveCollection();
