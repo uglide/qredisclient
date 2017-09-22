@@ -13,7 +13,7 @@ void RedisClient::ScanCommand::setCursor(long long cursor)
     }
 }
 
-bool RedisClient::ScanCommand::isValidScanCommand()
+bool RedisClient::ScanCommand::isValidScanCommand() const
 {
     auto parts = getSplitedRepresentattion();
 
@@ -21,12 +21,12 @@ bool RedisClient::ScanCommand::isValidScanCommand()
             || (parts.size() > 2 && isValueScanCommand(parts[0]));
 }
 
-bool RedisClient::ScanCommand::isKeyScanCommand(const QString &cmd)
+bool RedisClient::ScanCommand::isKeyScanCommand(const QString &cmd) const
 {
     return cmd.toLower() == "scan";
 }
 
-bool RedisClient::ScanCommand::isValueScanCommand(const QString &cmd)
+bool RedisClient::ScanCommand::isValueScanCommand(const QString &cmd) const
 {
     return cmd.toLower() == "zscan"
             || cmd.toLower() == "sscan"

@@ -206,25 +206,24 @@ bool RedisClient::Connection::waitForIdle(uint timeout)
     return waiter.wait();
 }
 
-void RedisClient::Connection::retrieveCollection(QSharedPointer<RedisClient::ScanCommand> cmd,
-                                                 Connection::CollectionCallback callback)
+void RedisClient::Connection::retrieveCollection(const ScanCommand &cmd, Connection::CollectionCallback callback)
 {
     if (getServerVersion() < 2.8)
         throw Exception("Scan commands not supported by redis-server.");
 
-    if (!cmd->isValidScanCommand())
+    if (!cmd.isValidScanCommand())
         throw Exception("Invalid command");
 
     processScanCommand(cmd, callback);
 }
 
-void RedisClient::Connection::retrieveCollectionIncrementally(QSharedPointer<RedisClient::ScanCommand> cmd,
+void RedisClient::Connection::retrieveCollectionIncrementally(const ScanCommand& cmd,
                                                               RedisClient::Connection::IncrementalCollectionCallback callback)
 {
     if (getServerVersion() < 2.8)
         throw Exception("Scan commands not supported by redis-server.");
 
-    if (!cmd->isValidScanCommand())
+    if (!cmd.isValidScanCommand())
         throw Exception("Invalid command");
 
     processScanCommand(cmd, [this, callback](QVariant c, QString err) {
@@ -314,7 +313,7 @@ void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback, cons
     QList<QByteArray> rawCmd {
         "scan", "0", "MATCH", pattern.toUtf8(), "COUNT", "10000"
     };
-    QSharedPointer<ScanCommand> keyCmd(new ScanCommand(rawCmd, dbIndex));
+    ScanCommand keyCmd(rawCmd, dbIndex);
 
     retrieveCollection(keyCmd, [this, callback](QVariant r, QString err)
     {
@@ -349,7 +348,7 @@ RedisClient::Response RedisClient::Connection::internalCommandSync(QList<QByteAr
     return commandSync(cmd);
 }
 
-void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd,
+void RedisClient::Connection::processScanCommand(const ScanCommand& cmd,
                                                  CollectionCallback callback,
                                                  QSharedPointer<QVariantList> result,
                                                  bool incrementalProcessing)
@@ -357,14 +356,17 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
     if (result.isNull())
         result = QSharedPointer<QVariantList>(new QVariantList());
 
-    cmd->setCallBack(this, [this, cmd, result, callback, incrementalProcessing]
+    auto cmdWithCallback = cmd;
+
+    cmdWithCallback.setCallBack(this, [this, cmd, result, callback, incrementalProcessing]
                      (RedisClient::Response r, QString error){
-        if (r.isErrorMessage()) {
+
+        if (r.isErrorMessage()) {            
             callback(r.getValue(), r.getValue().toString());
             return;
         }
 
-        if (!error.isEmpty()) {
+        if (!error.isEmpty()) {            
             callback(QVariant(), error);
             return;
         }
@@ -372,7 +374,7 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
         if (incrementalProcessing)
             result->clear();
 
-        if (!ScanResponse::isValidScanResponse(r)) {
+        if (!ScanResponse::isValidScanResponse(r)) {            
             if (result->isEmpty())
                 callback(QVariant(), incrementalProcessing ? END_OF_COLLECTION : QString());
             else
@@ -383,7 +385,7 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
 
         RedisClient::ScanResponse* scanResp = (RedisClient::ScanResponse*)(&r);
 
-        if (!scanResp) {
+        if (!scanResp) {            
             callback(QVariant(),
                      "Error occured on cast ScanResponse from Response.");
             return;
@@ -391,17 +393,18 @@ void RedisClient::Connection::processScanCommand(QSharedPointer<ScanCommand> cmd
 
         result->append(scanResp->getCollection());
 
-        if (scanResp->getCursor() <= 0) {            
+        if (scanResp->getCursor() <= 0) {
             callback(QVariant(*result), incrementalProcessing ? END_OF_COLLECTION : QString());
             return;
         }
 
-        cmd->setCursor(scanResp->getCursor());
+        auto newCmd = cmd;
+        newCmd.setCursor(scanResp->getCursor());
 
         processScanCommand(cmd, callback, result);
     });
 
-    runCommand(*cmd);
+    runCommand(cmdWithCallback);
 }
 
 void RedisClient::Connection::changeCurrentDbNumber(int db)

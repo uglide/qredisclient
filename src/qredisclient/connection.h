@@ -223,16 +223,14 @@ public:
      * @param cmd
      * @param callback
      */
-    virtual void retrieveCollection(QSharedPointer<ScanCommand> cmd,
-                                    CollectionCallback callback);
+    virtual void retrieveCollection(const ScanCommand& cmd, CollectionCallback callback);
 
     /**
      * @brief retrieveCollection
      * @param cmd
      * @param callback
      */
-    virtual void retrieveCollectionIncrementally(QSharedPointer<ScanCommand> cmd,
-                                                 IncrementalCollectionCallback callback);
+    virtual void retrieveCollectionIncrementally(const ScanCommand &cmd, IncrementalCollectionCallback callback);
 
     /**
      * @brief runCommand - Low level commands execution API
@@ -272,7 +270,7 @@ protected:
 
     Response internalCommandSync(QList<QByteArray> rawCmd);
 
-    void processScanCommand(QSharedPointer<ScanCommand> cmd,
+    void processScanCommand(const ScanCommand &cmd,
                             CollectionCallback callback,
                             QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>(),
                             bool incrementalProcessing=false);

@@ -1,5 +1,6 @@
 #pragma once
 #include "command.h"
+#include <QDebug>
 
 namespace RedisClient {
 
@@ -7,15 +8,15 @@ class ScanCommand : public Command
 {
 public:
     ScanCommand(const QList<QByteArray>& cmd, int db) : Command(cmd, db) {}
-    ScanCommand(const QList<QByteArray>& cmd) : Command(cmd) {}
+    ScanCommand(const QList<QByteArray>& cmd) : Command(cmd) {}    
 
     void setCursor(long long cursor);
 
-    bool isValidScanCommand();
+    bool isValidScanCommand() const;
 
 private:
-    bool isKeyScanCommand(const QString& cmd);
-    bool isValueScanCommand(const QString& cmd);
+    bool isKeyScanCommand(const QString& cmd) const;
+    bool isValueScanCommand(const QString& cmd) const;
 };
 
 }
