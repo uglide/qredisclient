@@ -324,6 +324,29 @@ void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback, cons
 
         return callback(keysList, QString());
     });
+}                                              
+
+void RedisClient::Connection::getNamespaceItems(RedisClient::Connection::NamespaceItemsCallback callback,
+                                                const QString &nsSeparator, const QString &pattern, uint dbIndex)
+{
+    QByteArray LUA_SCRIPT = QFile(":/namespace_scan.lua").readAll();
+
+    QList<QByteArray> rawCmd {
+        "eval", LUA_SCRIPT, "0", nsSeparator.toUtf8(), pattern.toUtf8()
+    };
+
+    Command evalCmd(rawCmd, dbIndex);
+
+    evalCmd.setCallBack(this, [this, callback] (RedisClient::Response r, QString error){
+
+        if (!error.isEmpty()) {
+            return callback(NamespaceItems(), error);
+        }
+
+        qDebug() << "LUA SCAN response:"<< r.toRawString();
+    });
+
+    runCommand(evalCmd);
 }
 
 void RedisClient::Connection::createTransporter()

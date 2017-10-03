@@ -15,3 +15,6 @@ SOURCES += \
 INCLUDEPATH += $$PWD/src/
 
 include($$PWD/3rdparty/3rdparty.pri)
+
+RESOURCES += \
+    $$PWD/lua.qrc

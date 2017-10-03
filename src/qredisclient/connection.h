@@ -141,6 +141,16 @@ public:
                                  const QString& pattern=QString("*"),
                                  uint dbIndex = 0);
 
+    typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
+    typedef QList<QByteArray> RootKeys;
+    typedef QPair<RootNamespaces, RootKeys> NamespaceItems;
+    typedef std::function<void(const NamespaceItems&, const QString&)> NamespaceItemsCallback;
+
+    virtual void getNamespaceItems(NamespaceItemsCallback callback,
+                                   const QString &nsSeparator,
+                                   const QString& pattern=QString("*"),
+                                   uint dbIndex = 0);
+
     /**
      * @brief getClusterKeys - async keys loading from all cluster nodes
      * @param callback
