@@ -60,13 +60,16 @@ bool RedisClient::Connection::connect(bool wait)
         disconnect();
         emit error(QString("Disconect on error: %1").arg(err));
     });
+    QObject::connect(this, &Connection::authError, this, [this](const QString&) {
+        disconnect();
+    });
 
 
     SignalWaiter waiter(m_config.connectionTimeout());
 
     if (wait) {
         waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
-        waiter.addAbortSignal(this, &Connection::authError);
+        waiter.addAbortSignal(this, &Connection::authError);        
         waiter.addSuccessSignal(this, &Connection::authOk);                    
     } else {       
         waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);                       
@@ -541,8 +544,8 @@ void RedisClient::Connection::auth()
         Response testResult = internalCommandSync({"PING"});
 
         if (testResult.toRawString() != "+PONG\r\n") {
-            emit error("AUTH ERROR");
             emit authError("Redis server requires password or password is not valid");
+            emit error("AUTH ERROR");            
             return;
         }
 
