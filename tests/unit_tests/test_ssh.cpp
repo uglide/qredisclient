@@ -35,23 +35,22 @@ void TestSsh::connectWithSshTunnelPass()
 void TestSsh::connectAndCheckTimeout()
 {
     //given
+    QString validResponse("+PONG\r\n");
     config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 22, "");
-    Connection connection(config, false);
-    Command cmd("ping");
+    Connection connection(config, false);    
 
     //when
-    bool actualResult = connection.connect();
+    QVERIFY(connection.connect());
     wait(15 * 60 * 1000);
-    Response actualCmdResult = CommandExecutor::execute(&connection, cmd);
-    QCOMPARE(actualCmdResult.toString(), QString("+PONG\r\n"));
+    Response actualCmdResult = connection.commandSync("PING");
+    QCOMPARE(actualCmdResult.toRawString(), validResponse);
     wait(60 * 1000);
-    actualCmdResult = CommandExecutor::execute(&connection, cmd);
-    QCOMPARE(actualCmdResult.toString(), QString("+PONG\r\n"));
+    actualCmdResult = connection.commandSync("PING");
+    QCOMPARE(actualCmdResult.toRawString(), validResponse);
     wait(60 * 1000);
 
     //then
-    QCOMPARE(connection.isConnected(), true);
-    QCOMPARE(actualResult, true);
+    QCOMPARE(connection.isConnected(), true);    
 }
 
 void TestSsh::connectWithSshTunnelKey()
