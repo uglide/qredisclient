@@ -18,7 +18,9 @@ install:
 - if [ "$RDM_QT_VERSION" == "591" ]; then 
   sudo apt-get install dropbear -y -qq && 
   sudo mkdir -p /etc/dropbear &&   
-  sudo useradd -d /home/rdm -s /bin/bash -p $(echo test | openssl passwd -1 -stdin) rdm; fi
+  sudo useradd -d /home/rdm -s /bin/bash -p $(echo test | openssl passwd -1 -stdin) rdm &&
+  ls /home &&
+  service dropbear status; fi
 - git clone https://github.com/libssh2/libssh2.git libssh2
 - cd libssh2
 - git checkout libssh2-1.8.0
