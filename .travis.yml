@@ -21,7 +21,7 @@ install:
   sudo useradd -d /home/rdm -s /bin/bash -p $(echo test | openssl passwd -1 -stdin) rdm &&
   compgen -u &&
   (sudo service dropbear stop || true) &&
-  dropbear -E; fi
+  sudo dropbear -E; fi
 - git clone https://github.com/libssh2/libssh2.git libssh2
 - cd libssh2
 - git checkout libssh2-1.8.0
