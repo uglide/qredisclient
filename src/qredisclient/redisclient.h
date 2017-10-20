@@ -15,5 +15,5 @@ inline void initRedisClient()
     qRegisterMetaType<RedisClient::Response>("Response");
     qRegisterMetaType<RedisClient::Response>("RedisClient::Response");
     qRegisterMetaType<QVector<QVariant*>>("QVector<QVariant*>");
-    qRegisterMetaType<QVariant*>("QVariant*");
+    qRegisterMetaType<QVariant*>("QVariant*");    
 }
