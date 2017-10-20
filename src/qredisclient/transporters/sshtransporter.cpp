@@ -74,6 +74,7 @@ bool RedisClient::SshTransporter::connectToHost()
     //connect to ssh server
     SignalWaiter waiter(config.connectionTimeout());
     waiter.addAbortSignal(this, &RedisClient::SshTransporter::errorOccurred);
+    waiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::disconnected);
     waiter.addSuccessSignal(m_sshClient.data(), &QxtSshClient::connected);
 
     emit logEvent("Connecting to SSH host...");
@@ -116,6 +117,7 @@ bool RedisClient::SshTransporter::openTcpSocket()
 
     SignalWaiter socketWaiter(config.connectionTimeout());
     socketWaiter.addAbortSignal(m_socket, &QxtSshTcpSocket::destroyed);
+    socketWaiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::disconnected);
     socketWaiter.addSuccessSignal(m_socket, &QxtSshTcpSocket::readyRead);
 
     connect(m_socket, &QxtSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);

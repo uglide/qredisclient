@@ -21,7 +21,7 @@ void TestSsh::init()
 void TestSsh::connectWithSshTunnelPass()
 {
     //given
-    config.setSshTunnelSettings("192.168.56.222", "vagrant", "vagrant", 22, "");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 22, "");
     Connection connection(config, false);
 
     //when
@@ -35,7 +35,7 @@ void TestSsh::connectWithSshTunnelPass()
 void TestSsh::connectAndCheckTimeout()
 {
     //given
-    config.setSshTunnelSettings("192.168.56.222", "vagrant", "vagrant", 22, "");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 22, "");
     Connection connection(config, false);
     Command cmd("ping");
 

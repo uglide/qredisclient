@@ -496,7 +496,7 @@ void QxtSshClientPrivate::d_readyRead(){
                 d_getLastError();
                 emit p->error(QxtSshClient::UnexpectedShutdownError);
                 d_reset();
-                emit p->disconnected();
+                emit p->disconnected();                
                 return;
             }
         }
@@ -615,7 +615,8 @@ void QxtSshClientPrivate::d_reset(){
 void QxtSshClientPrivate::d_disconnected (){
     if(d_state!=0){
         qWarning("unexpected shutdown");
-        d_reset();
+        emit p->disconnected();
+        d_reset();        
     }
 }
 
