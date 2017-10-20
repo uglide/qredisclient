@@ -2,6 +2,9 @@
 #include <QThread>
 #include <QDebug>
 #include <QRegularExpression>
+#include <QDir>
+#include <QJsonDocument>
+
 #include "command.h"
 #include "scancommand.h"
 #include "transporters/defaulttransporter.h"
@@ -9,6 +12,8 @@
 #include "scanresponse.h"
 #include "utils/sync.h"
 #include "utils/compat.h"
+
+inline void initResources() { Q_INIT_RESOURCE(lua); }
 
 const QString END_OF_COLLECTION = "end_of_collection";
 
@@ -19,12 +24,13 @@ RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
       m_autoConnect(autoConnect),
       m_stoppingTransporter(false)
 {            
+    initResources();
 }
 
 RedisClient::Connection::~Connection()
 {
     if (isConnected())
-        disconnect();
+        disconnect();    
 }
 
 bool RedisClient::Connection::connect(bool wait)
@@ -327,12 +333,18 @@ void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback, cons
 }                                              
 
 void RedisClient::Connection::getNamespaceItems(RedisClient::Connection::NamespaceItemsCallback callback,
-                                                const QString &nsSeparator, const QString &pattern, uint dbIndex)
+                                                const QString &nsSeparator, const QString &filter, uint dbIndex)
 {
-    QByteArray LUA_SCRIPT = QFile(":/namespace_scan.lua").readAll();
+    QFile script("://scan.lua");
+    if (!script.open(QIODevice::ReadOnly)) {
+        qWarning() << "Cannot open LUA resource";
+        return;
+    }
+
+    QByteArray LUA_SCRIPT = script.readAll();
 
     QList<QByteArray> rawCmd {
-        "eval", LUA_SCRIPT, "0", nsSeparator.toUtf8(), pattern.toUtf8()
+        "eval", LUA_SCRIPT, "0", nsSeparator.toUtf8(), filter.toUtf8()
     };
 
     Command evalCmd(rawCmd, dbIndex);
@@ -343,7 +355,45 @@ void RedisClient::Connection::getNamespaceItems(RedisClient::Connection::Namespa
             return callback(NamespaceItems(), error);
         }
 
-        qDebug() << "LUA SCAN response:"<< r.toRawString();
+        QList<QVariant> result = r.getValue().toList();
+
+        if (result.size() != 2) {
+            return callback(NamespaceItems(), "Invalid response from LUA script");
+        }
+
+        QJsonDocument rootNamespacesJson = QJsonDocument::fromJson(result[0].toByteArray());
+        QJsonDocument rootKeysJson = QJsonDocument::fromJson(result[1].toByteArray());
+
+        if (rootNamespacesJson.isEmpty()
+                || rootKeysJson.isEmpty()
+                || !(rootNamespacesJson.isObject() && rootKeysJson.isObject())) {
+            return callback(NamespaceItems(), "Invalid response from LUA script");
+        }
+
+        QVariantMap rootNamespaces = rootNamespacesJson.toVariant().toMap();
+        QList<QString> rootKeys = rootKeysJson.toVariant().toMap().keys();
+
+        QVariantMap::const_iterator i = rootNamespaces.constBegin();
+        RootNamespaces rootNs;
+        rootNs.reserve(rootNamespaces.size());
+
+        while (i != rootNamespaces.constEnd()) {
+            rootNs.append(QPair<QByteArray, ulong>(
+                              i.key().toUtf8(), (ulong)i.value().toDouble())
+                          );
+             ++i;
+        }
+
+        RootKeys keys;
+        keys.reserve(rootKeys.size());
+
+        foreach (QString key, rootKeys) {
+            keys.append(key.toUtf8());
+        }
+
+        qDebug() << "ns items is loaded via lua script";
+
+        callback(NamespaceItems(rootNs, keys), QString());
     });
 
     runCommand(evalCmd);

@@ -1,5 +1,5 @@
 <RCC>
     <qresource prefix="/">
-        <file alias="namespace_scan.lua">src/qredisclient/lua/namespace_scan.lua</file>
+        <file alias="scan.lua">src/qredisclient/lua/namespace_scan.lua</file>
     </qresource>
 </RCC>

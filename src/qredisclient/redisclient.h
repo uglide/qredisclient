@@ -7,7 +7,6 @@
 #include <QObject>
 #include <QVector>
 #include <QByteArray>
-#include <QDir>
 
 inline void initRedisClient()
 {
@@ -16,6 +15,5 @@ inline void initRedisClient()
     qRegisterMetaType<RedisClient::Response>("Response");
     qRegisterMetaType<RedisClient::Response>("RedisClient::Response");
     qRegisterMetaType<QVector<QVariant*>>("QVector<QVariant*>");
-    qRegisterMetaType<QVariant*>("QVariant*");
-    Q_INIT_RESOURCE(lua);
+    qRegisterMetaType<QVariant*>("QVariant*");    
 }
