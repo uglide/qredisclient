@@ -34,3 +34,6 @@ UI_DIR = $$DESTDIR/ui
 OBJECTS_DIR = $$DESTDIR/obj
 MOC_DIR = $$DESTDIR/obj
 RCC_DIR = $$DESTDIR/obj
+
+RESOURCES += \
+    $$PROJECT_ROOT/lua.qrc

@@ -51,9 +51,9 @@ void TestConnection::testRetriveCollection()
 {
     //given
     Connection connection(config);
-    QSharedPointer<ScanCommand> cmd(new ScanCommand({"SCAN", "0"})); //valid
+    ScanCommand cmd({"SCAN", "0"}); //valid
     bool callbackCalled = false;
-    QVERIFY(cmd->isValidScanCommand());
+    QVERIFY(cmd.isValidScanCommand());
 
     //when
     connection.connect();

@@ -40,7 +40,7 @@ public:
         return m_version;
     }
 
-    void retrieveCollection(QSharedPointer<RedisClient::ScanCommand>,
+    void retrieveCollection(const RedisClient::ScanCommand&,
                             Connection::CollectionCallback callback) override
     {
         QVariant resp;
