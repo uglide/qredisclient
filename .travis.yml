@@ -16,7 +16,7 @@ install:
 - sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 -y -qq
 - sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake -y -qq
 - if [ "$RDM_QT_VERSION" == "591" ]; then \
-  sudo apt-get install dropbear && \
+  sudo apt-get install dropbear -y -qq && \
   sudo mkdir -p /etc/dropbear && \
   sudo dropbearkey -t rsa -f /etc/dropbear/dropbear_rsa_host_key && \
   sudo dropbearkey -t dss -f /etc/dropbear/dropbear_dss_host_key && \
