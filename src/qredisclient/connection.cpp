@@ -477,7 +477,7 @@ void RedisClient::Connection::processScanCommand(const ScanCommand& cmd,
         auto newCmd = cmd;
         newCmd.setCursor(scanResp->getCursor());
 
-        processScanCommand(cmd, callback, result);
+        processScanCommand(newCmd, callback, result);
     });
 
     runCommand(cmdWithCallback);
