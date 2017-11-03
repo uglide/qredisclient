@@ -13,7 +13,7 @@ void TestSsh::init()
     qRegisterMetaType<RedisClient::Command>("Command");
     qRegisterMetaType<RedisClient::Response>("RedisClient::Response");
 
-    config = ConnectionConfig("127.0.0.1", "test", 7000, "test");
+    config = ConnectionConfig("127.0.0.1", "test", 6379, "test");
     config.setTimeouts(10000, 10000);
 }
 
@@ -21,8 +21,11 @@ void TestSsh::init()
 void TestSsh::connectWithSshTunnelPass()
 {
     //given
-    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
+    config.setSshTunnelSettings("192.168.43.249", "rdm", "test", 2200, "");
     Connection connection(config, false);
+    QObject::connect(&connection, &Connection::log, this, [](const QString& e) {
+        qDebug() << "Connection event:" << e;
+    });
 
     //when
     bool actualResult = connection.connect();
