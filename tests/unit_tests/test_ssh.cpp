@@ -21,7 +21,7 @@ void TestSsh::init()
 void TestSsh::connectWithSshTunnelPass()
 {
     //given
-    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 22, "");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
     Connection connection(config, false);
 
     //when
@@ -36,7 +36,7 @@ void TestSsh::connectAndCheckTimeout()
 {
     //given
     QString validResponse("+PONG\r\n");
-    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 22, "");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
     Connection connection(config, false);    
 
     //when
