@@ -50,6 +50,8 @@ install:
 - qmake -v
 - gcc --version
 - gcov --version
+before_sript:
+- export QTEST_FUNCTION_TIMEOUT=1000000
 script: 
   - if [ "$RDM_QT_VERSION" == "591" ]; then cd ./tests/unit_tests && ./run_tests; fi
   - qmake && make
