@@ -14,7 +14,10 @@ private slots:
 
 #ifdef SSH_TESTS
     void connectWithSshTunnelPass();
+
     void connectWithSshTunnelKey();
+    void connectWithSshTunnelKey_data();
+
     void connectAndCheckTimeout();
 #endif
 private:

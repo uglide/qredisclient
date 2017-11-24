@@ -21,7 +21,7 @@ void TestSsh::init()
 void TestSsh::connectWithSshTunnelPass()
 {
     //given
-    config.setSshTunnelSettings("192.168.43.249", "rdm", "test", 2200, "");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
     Connection connection(config, false);
     QObject::connect(&connection, &Connection::log, this, [](const QString& e) {
         qDebug() << "Connection event:" << e;
@@ -55,6 +55,9 @@ void TestSsh::connectAndCheckTimeout()
 void TestSsh::connectWithSshTunnelKey()
 {
     //given
+    QFETCH(QString, password);
+    QFETCH(QString, keyPath);
+    config.setSshTunnelSettings("127.0.0.1", "rdm", password, 2201, keyPath);
     Connection connection(config, false);
 
     //when
@@ -63,5 +66,15 @@ void TestSsh::connectWithSshTunnelKey()
     //then
     QCOMPARE(connection.isConnected(), true);
     QCOMPARE(actualResult, true);
+}
+
+void TestSsh::connectWithSshTunnelKey_data()
+{
+    QTest::addColumn<QString>("password");
+    QTest::addColumn<QString>("keyPath");
+
+    QTest::newRow("Private key without password") << "" << "without_pass.key";
+    QTest::newRow("Private key with password") << "SSH_KEY_PASS" << "without_pass.key";
+
 }
 #endif
