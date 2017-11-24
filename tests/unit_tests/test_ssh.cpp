@@ -44,13 +44,9 @@ void TestSsh::connectAndCheckTimeout()
 
     //when
     QVERIFY(connection.connect());
-    wait(3 * 60 * 1000);
+    wait(60 * 1000);
     Response actualCmdResult = connection.commandSync("PING");
     QCOMPARE(actualCmdResult.toRawString(), validResponse);
-    wait(60 * 1000);
-    actualCmdResult = connection.commandSync("PING");
-    QCOMPARE(actualCmdResult.toRawString(), validResponse);
-    wait(60 * 1000);
 
     //then
     QCOMPARE(connection.isConnected(), true);    

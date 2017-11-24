@@ -29,8 +29,8 @@ install:
   cat without_pass.key.pub | sudo tee -a /home/rdm/.ssh/.authorized_keys &&
   cat with_pass.key.pub | sudo tee -a /home/rdm/.ssh/.authorized_keys &&
   (sudo service dropbear stop || true) &&
-  sudo dropbear -E -p 2200 && 
-  sudo dropbear -E -s -p 2201; fi
+  sudo dropbear -E -I 10 -p 2200 && 
+  sudo dropbear -E -I 10 -s -p 2201; fi
 - git clone https://github.com/libssh2/libssh2.git libssh2
 - cd libssh2
 - git checkout libssh2-1.8.0
@@ -50,8 +50,6 @@ install:
 - qmake -v
 - gcc --version
 - gcov --version
-before_sript:
-- export QTEST_FUNCTION_TIMEOUT=1000000
 script: 
   - if [ "$RDM_QT_VERSION" == "591" ]; then cd ./tests/unit_tests && ./run_tests; fi
   - qmake && make
