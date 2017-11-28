@@ -6,6 +6,8 @@ TEMPLATE = app
 CONFIG += debug c++11 console
 CONFIG-=app_bundle
 
+DEFINES += QT_NO_DEBUG_OUTPUT
+
 PROJECT_ROOT = $$PWD/../../
 DESTDIR = $$PWD/bin
 
