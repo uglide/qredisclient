@@ -68,7 +68,7 @@ script:
         python tests.py &&
         popd;
     fi
-  - qmake && make
+  - qmake && make -s
 after_success:
   - if [ "$RDM_QT_VERSION" == "591" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
 services:
