@@ -14,7 +14,7 @@ install:
 - sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
 - sudo apt-get update -qq
 - sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 -y -qq
-- sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake -y -qq
+- sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake python3 virtualenv -y -qq
 - if [ "$RDM_QT_VERSION" == "591" ]; then 
   sudo apt-get install dropbear -y -qq && 
   sudo mkdir -p /etc/dropbear &&   
@@ -57,6 +57,13 @@ install:
 - gcov --version
 script: 
   - if [ "$RDM_QT_VERSION" == "591" ]; then cd ./tests/unit_tests && ./run_tests; fi
+  - if [ "$RDM_QT_VERSION" == "591" ]; then 
+        cd ./tests/functional && 
+        virtualenv .venv -p python3 &&
+        source .venv/bin/activate &&
+        pip install -r requirements.txt &&
+        python tests.py
+    fi
   - qmake && make
 after_success:
   - if [ "$RDM_QT_VERSION" == "591" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
