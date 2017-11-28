@@ -23,14 +23,16 @@ install:
   sudo mkdir -p /home/rdm/.ssh &&
   ssh-keygen -t rsa -N "" -f without_pass.key &&
   ssh-keygen -t rsa -N "" -P "SSH_KEY_PASS" -f with_pass.key &&
-  mv without_pass.key ./tests/unit_tests/ &&
-  mv without_pass.key.pub ./tests/unit_tests/ &&
-  mv with_pass.key ./tests/unit_tests/ &&
-  mv with_pass.key.pub ./tests/unit_tests/ &&
+  cp without_pass.key ./tests/unit_tests/ &&
+  cp without_pass.key.pub ./tests/unit_tests/ &&
+  cp with_pass.key ./tests/unit_tests/ &&
+  cp with_pass.key.pub ./tests/unit_tests/ &&
   cat without_pass.key.pub | sudo tee -a /home/rdm/.ssh/authorized_keys &&
   cat with_pass.key.pub | sudo tee -a /home/rdm/.ssh/authorized_keys &&
+  sudo cat /home/rdm/.ssh/authorized_keys &&
   sudo chmod 600 /home/rdm/.ssh/authorized_keys &&
   sudo chown -R rdm /home/rdm/ &&
+  sudo ls -al /home/rdm/.ssh/ &&
   (sudo service dropbear stop || true) &&
   sudo dropbear -E -I 10 -p 2200 && 
   sudo dropbear -E -I 10 -s -p 2201; fi
