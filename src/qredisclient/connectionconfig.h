@@ -91,6 +91,13 @@ public:
     QString getSshPrivateKey() const;
     QString getSshPrivateKeyPath() const;
 
+    /**
+     * @brief getSshPublicKey from specified path
+     * @return QString with ssh key
+     */
+    QString getSshPublicKey() const;
+    QString getSshPublicKeyPath() const;
+
     void setSshPassword(QString pass);
     void setSshHost(QString host);
     void setSshPrivateKeyPath(QString path);
@@ -107,7 +114,8 @@ public:
      */
     void setSshTunnelSettings(QString host, QString user, QString pass,
                               uint port = DEFAULT_SSH_PORT,
-                              QString sshPrivatekeyPath = "");
+                              QString sshPrivatekeyPath = "",
+                              QString sshPublickeyPath = "");
 
     /*
      * Convert config to JSON

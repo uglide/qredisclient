@@ -15,6 +15,27 @@ install:
 - sudo apt-get update -qq
 - sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 -y -qq
 - sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake -y -qq
+- if [ "$RDM_QT_VERSION" == "591" ]; then 
+  sudo apt-get install dropbear -y -qq && 
+  sudo mkdir -p /etc/dropbear &&   
+  sudo useradd -d /home/rdm -s /bin/bash -p $(echo test | openssl passwd -1 -stdin) rdm &&
+  compgen -u &&
+  sudo mkdir -p /home/rdm/.ssh &&
+  ssh-keygen -t rsa -N "" -f without_pass.key &&
+  ssh-keygen -t rsa -N "" -P "SSH_KEY_PASS" -f with_pass.key &&
+  cp without_pass.key ./tests/unit_tests/ &&
+  cp without_pass.key.pub ./tests/unit_tests/ &&
+  cp with_pass.key ./tests/unit_tests/ &&
+  cp with_pass.key.pub ./tests/unit_tests/ &&
+  cat without_pass.key.pub | sudo tee -a /home/rdm/.ssh/authorized_keys &&
+  cat with_pass.key.pub | sudo tee -a /home/rdm/.ssh/authorized_keys &&
+  sudo cat /home/rdm/.ssh/authorized_keys &&
+  sudo chmod 600 /home/rdm/.ssh/authorized_keys &&
+  sudo chown -R rdm /home/rdm/ &&
+  sudo ls -al /home/rdm/.ssh/ &&
+  (sudo service dropbear stop || true) &&
+  sudo dropbear -E -I 10 -p 2200 && 
+  sudo dropbear -E -I 10 -s -p 2201; fi
 - git clone https://github.com/libssh2/libssh2.git libssh2
 - cd libssh2
 - git checkout libssh2-1.8.0

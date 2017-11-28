@@ -13,16 +13,19 @@ void TestSsh::init()
     qRegisterMetaType<RedisClient::Command>("Command");
     qRegisterMetaType<RedisClient::Response>("RedisClient::Response");
 
-    config = ConnectionConfig("127.0.0.1", "test", 7000, "test");
-    config.setTimeouts(10000, 10000);
+    config = ConnectionConfig("127.0.0.1", "test", 6379, "test");
+    config.setTimeouts(20000, 20000);
 }
 
 #ifdef SSH_TESTS
 void TestSsh::connectWithSshTunnelPass()
 {
     //given
-    config.setSshTunnelSettings("192.168.56.222", "vagrant", "vagrant", 22, "");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
     Connection connection(config, false);
+    QObject::connect(&connection, &Connection::log, this, [](const QString& e) {
+        qDebug() << "Connection event:" << e;
+    });
 
     //when
     bool actualResult = connection.connect();
@@ -35,35 +38,47 @@ void TestSsh::connectWithSshTunnelPass()
 void TestSsh::connectAndCheckTimeout()
 {
     //given
-    config.setSshTunnelSettings("192.168.56.222", "vagrant", "vagrant", 22, "");
+    QString validResponse("+PONG\r\n");
+    config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
     Connection connection(config, false);
-    Command cmd("ping");
+
+    //when
+    QVERIFY(connection.connect());
+    wait(60 * 1000);
+    Response actualCmdResult = connection.commandSync("PING");
+    QCOMPARE(actualCmdResult.toRawString(), validResponse);
+
+    //then
+    QCOMPARE(connection.isConnected(), true);
+}
+
+void TestSsh::connectWithSshTunnelKey()
+{
+    //given
+    QFETCH(QString, password);
+    QFETCH(QString, keyPath);
+    config.setSshTunnelSettings("127.0.0.1", "rdm", password, 2201,
+                                keyPath, QString("%1.pub").arg(keyPath));
+    Connection connection(config, false);
+    QObject::connect(&connection, &RedisClient::Connection::error, this, [](const QString& err){
+        qDebug() << "Connection error:" << err;
+    });
 
     //when
     bool actualResult = connection.connect();
-    wait(15 * 60 * 1000);
-    Response actualCmdResult = CommandExecutor::execute(&connection, cmd);
-    QCOMPARE(actualCmdResult.toString(), QString("+PONG\r\n"));
-    wait(60 * 1000);
-    actualCmdResult = CommandExecutor::execute(&connection, cmd);
-    QCOMPARE(actualCmdResult.toString(), QString("+PONG\r\n"));
-    wait(60 * 1000);
 
     //then
     QCOMPARE(connection.isConnected(), true);
     QCOMPARE(actualResult, true);
 }
 
-void TestSsh::connectWithSshTunnelKey()
+void TestSsh::connectWithSshTunnelKey_data()
 {
-    //given
-    Connection connection(config, false);
+    QTest::addColumn<QString>("password");
+    QTest::addColumn<QString>("keyPath");
 
-    //when
-    bool actualResult = connection.connect();
+    QTest::newRow("Private key without password") << "" << "without_pass.key";
+    QTest::newRow("Private key with password") << "SSH_KEY_PASS" << "without_pass.key";
 
-    //then
-    QCOMPARE(connection.isConnected(), true);
-    QCOMPARE(actualResult, true);
 }
 #endif

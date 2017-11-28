@@ -332,6 +332,10 @@ QxtSshTcpSocket * QxtSshClient::openTcpSocket(const QString & hostName,quint16 p
     return s;
 }
 
+QString QxtSshClient::getLastError() const
+{
+    return d->d_errorMessage;
+}
 
 static ssize_t qxt_p_libssh_recv(int socket,void *buffer, size_t length,int flags, void **abstract){
     Q_UNUSED(socket);
@@ -375,12 +379,9 @@ QxtSshClientPrivate::QxtSshClientPrivate()
 
 }
 
-QxtSshClientPrivate::~QxtSshClientPrivate(){
-//    d_reset();
-//    if(d_session){
-//        libssh2_knownhost_free(d_knownHosts);
-//        libssh2_session_free(d_session);
-//    }
+QxtSshClientPrivate::~QxtSshClientPrivate()
+{
+    d_tearDown();
 }
 
 void QxtSshClientPrivate::d_tearDown()
@@ -496,7 +497,7 @@ void QxtSshClientPrivate::d_readyRead(){
                 d_getLastError();
                 emit p->error(QxtSshClient::UnexpectedShutdownError);
                 d_reset();
-                emit p->disconnected();
+                emit p->disconnected();                
                 return;
             }
         }
@@ -547,11 +548,14 @@ void QxtSshClientPrivate::d_readyRead(){
                                           qPrintable(d_passphrase));
 
         }else if(d_currentAuthTry==QxtSshClient::PublicKeyAuthentication){
-            ret=libssh2_userauth_publickey_fromfile(d_session,
-                                                       qPrintable(d_userName),
-                                                       NULL, //qPrintable(d_publicKey),
+            QByteArray username=d_userName.toLocal8Bit();
+            ret=libssh2_userauth_publickey_fromfile_ex(d_session,
+                                                       username.data(),
+                                                       username.length(),
+                                                       (d_publicKey.size() > 0)? qPrintable(d_publicKey): NULL,
                                                        qPrintable(d_privateKey),
-                                                       qPrintable(d_passphrase));
+                                                       (d_passphrase.size() > 0)? qPrintable(d_passphrase): NULL);
+
         }
         if(ret==LIBSSH2_ERROR_EAGAIN){
             return;
@@ -560,6 +564,9 @@ void QxtSshClientPrivate::d_readyRead(){
             emit p->connected();
         }else{
             d_getLastError();
+            #ifdef QXT_DEBUG_SSH
+            qDebug() << d_errorMessage;
+            #endif
             emit p->error(QxtSshClient::AuthenticationError);
             d_failedMethods.append(d_currentAuthTry);
             d_state=4;
@@ -615,7 +622,8 @@ void QxtSshClientPrivate::d_reset(){
 void QxtSshClientPrivate::d_disconnected (){
     if(d_state!=0){
         qWarning("unexpected shutdown");
-        d_reset();
+        emit p->disconnected();
+        d_reset();        
     }
 }
 

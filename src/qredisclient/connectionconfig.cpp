@@ -171,13 +171,17 @@ QVariantHash RedisClient::ConnectionConfig::getInternalParameters() const
     return m_parameters;
 }
 
-void RedisClient::ConnectionConfig::setSshTunnelSettings(QString host, QString user, QString pass, uint port, QString sshPrivatekeyPath)
+void RedisClient::ConnectionConfig::setSshTunnelSettings(QString host,
+                                                         QString user, QString pass,
+                                                         uint port,
+                                                         QString sshPrivatekeyPath, QString sshPublickeyPath)
 {
     m_parameters.insert("ssh_host", host);
     m_parameters.insert("ssh_user", user);
     m_parameters.insert("ssh_password", pass);
     m_parameters.insert("ssh_port", port);
     m_parameters.insert("ssh_private_key_path", sshPrivatekeyPath);
+    m_parameters.insert("ssh_public_key_path", sshPublickeyPath);
 }
 
 bool RedisClient::ConnectionConfig::isNull() const
@@ -235,6 +239,16 @@ QString RedisClient::ConnectionConfig::getSshPrivateKey() const
 QString RedisClient::ConnectionConfig::getSshPrivateKeyPath() const
 {
     return param<QString>("ssh_private_key_path");
+}
+
+QString RedisClient::ConnectionConfig::getSshPublicKey() const
+{
+    return getValidPathFromParameter("ssh_public_key_path");
+}
+
+QString RedisClient::ConnectionConfig::getSshPublicKeyPath() const
+{
+    return param<QString>("ssh_public_key_path");
 }
 
 void RedisClient::ConnectionConfig::setSshPassword(QString pass)

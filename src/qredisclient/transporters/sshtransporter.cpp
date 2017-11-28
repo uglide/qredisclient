@@ -65,15 +65,16 @@ bool RedisClient::SshTransporter::connectToHost()
     if (config.isSshPasswordUsed())
         m_sshClient->setPassphrase(config.sshPassword());
 
-    QString privateKey = config.getSshPrivateKey();
-
-    if (!privateKey.isEmpty()) {
-        m_sshClient->setKeyFiles("", privateKey);
+    if (config.getSshPrivateKey().size() > 0) {
+        QString privateKey = config.getSshPrivateKeyPath();
+        QString publicKey = config.getSshPublicKeyPath();
+        m_sshClient->setKeyFiles(publicKey, privateKey);
     }    
 
     //connect to ssh server
     SignalWaiter waiter(config.connectionTimeout());
     waiter.addAbortSignal(this, &RedisClient::SshTransporter::errorOccurred);
+    waiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::disconnected);
     waiter.addSuccessSignal(m_sshClient.data(), &QxtSshClient::connected);
 
     emit logEvent("Connecting to SSH host...");
@@ -116,6 +117,7 @@ bool RedisClient::SshTransporter::openTcpSocket()
 
     SignalWaiter socketWaiter(config.connectionTimeout());
     socketWaiter.addAbortSignal(m_socket, &QxtSshTcpSocket::destroyed);
+    socketWaiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::disconnected);
     socketWaiter.addSuccessSignal(m_socket, &QxtSshTcpSocket::readyRead);
 
     connect(m_socket, &QxtSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);
@@ -146,7 +148,11 @@ void RedisClient::SshTransporter::OnSshConnectionError(QxtSshClient::Error error
         return;
     }
 
-    emit errorOccurred(QString("SSH Connection error: %1").arg(getSshErrorString(error)));
+    emit errorOccurred(
+        QString("SSH Connection error(%1): %2")
+                .arg(getSshErrorString(error))
+                .arg(m_sshClient->getLastError())
+    );
 }
 
 void RedisClient::SshTransporter::OnSshSocketDestroyed()
