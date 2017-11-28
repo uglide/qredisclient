@@ -77,7 +77,7 @@ public:
      * @param i
      * @return
      */
-    QString getPartAsString(int i);
+    QString getPartAsString(int i) const;
 
     /**
      * @brief Get database index where this command should be executed
