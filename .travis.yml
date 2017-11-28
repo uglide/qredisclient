@@ -28,6 +28,8 @@ install:
   mv with_pass.key ./tests/unit_tests/ &&
   cat without_pass.key.pub | sudo tee -a /home/rdm/.ssh/authorized_keys &&
   cat with_pass.key.pub | sudo tee -a /home/rdm/.ssh/authorized_keys &&
+  sudo chmod 600 /home/rdm/.ssh/authorized_keys &&
+  sudo chown -R rdm /home/rdm/ &&
   (sudo service dropbear stop || true) &&
   sudo dropbear -E -I 10 -p 2200 && 
   sudo dropbear -E -I 10 -s -p 2201; fi
