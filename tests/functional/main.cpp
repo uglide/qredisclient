@@ -49,16 +49,12 @@ int main(int argc, char *argv[])
 
     QJsonArray allCommands = commands.array();
 
-    RedisClient::ConnectionConfig config("127.0.0.1");
+    RedisClient::ConnectionConfig config("127.0.0.1", "test");
     config.setPort(6379);
     RedisClient::Connection connection(config);   
 
     int processedCommandsCount = 0;
     int errorsCount = 0;
-
-    QObject::connect(&connection, &RedisClient::Connection::log, [](QString msg) {
-        qDebug() << "Connection:" << msg;
-    });
 
     QObject::connect(&connection, &RedisClient::Connection::error, [&errorsCount](QString msg) {
         qDebug() << "Connection error:" << msg;
