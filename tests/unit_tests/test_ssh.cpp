@@ -60,6 +60,9 @@ void TestSsh::connectWithSshTunnelKey()
     config.setSshTunnelSettings("127.0.0.1", "rdm", password, 2201,
                                 keyPath, QString("%1.pub").arg(keyPath));
     Connection connection(config, false);
+    QObject::connect(&connection, &RedisClient::Connection::error, this, [](const QString& err){
+        qDebug() << "Connection error:" << err;
+    });
 
     //when
     bool actualResult = connection.connect();
