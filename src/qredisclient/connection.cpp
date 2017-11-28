@@ -437,7 +437,18 @@ void RedisClient::Connection::processScanCommand(const ScanCommand& cmd,
     cmdWithCallback.setCallBack(this, [this, cmd, result, callback, incrementalProcessing]
                      (RedisClient::Response r, QString error){
 
-        if (r.isErrorMessage()) {            
+        if (r.isErrorMessage()) {
+
+            /*
+             * aliyun cloud provides iscan command for scanning clusters
+             */
+            if (cmd.getPartAsString(0).toLower() == "scan" && r.isDisabledCommandErrorMessage()) {
+                auto rawCmd = cmd.getSplitedRepresentattion();
+                rawCmd.replace(0, "iscan");
+                auto iscanCmd = ScanCommand(rawCmd);
+                return processScanCommand(iscanCmd, callback, result, incrementalProcessing);
+            }
+
             callback(r.getValue(), r.getValue().toString());
             return;
         }

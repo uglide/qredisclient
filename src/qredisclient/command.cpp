@@ -157,7 +157,7 @@ QList<QByteArray> RedisClient::Command::getSplitedRepresentattion() const
     return m_commandWithArguments;
 }
 
-QString RedisClient::Command::getPartAsString(int i)
+QString RedisClient::Command::getPartAsString(int i) const
 {
     if (m_commandWithArguments.size() <= i)
         return QString();
