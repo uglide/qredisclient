@@ -56,10 +56,6 @@ int main(int argc, char *argv[])
     int processedCommandsCount = 0;
     int errorsCount = 0;
 
-    QObject::connect(&connection, &RedisClient::Connection::log, [](QString msg) {
-        qDebug() << "Connection:" << msg;
-    });
-
     QObject::connect(&connection, &RedisClient::Connection::error, [&errorsCount](QString msg) {
         qDebug() << "Connection error:" << msg;
         errorsCount++;
