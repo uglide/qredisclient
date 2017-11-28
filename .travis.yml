@@ -60,6 +60,8 @@ script:
   - if [ "$RDM_QT_VERSION" == "591" ]; then pushd ./tests/unit_tests && ./run_tests && popd; fi
   - if [ "$RDM_QT_VERSION" == "591" ]; then 
         pushd ./tests/functional && 
+        mkdir bin &&
+        qmake "DESTDIR=./bin/" && make -s &&
         virtualenv .venv -p python3 &&
         source .venv/bin/activate &&
         pip install -r requirements.txt &&
