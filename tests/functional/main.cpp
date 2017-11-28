@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 
     QJsonArray allCommands = commands.array();
 
-    RedisClient::ConnectionConfig config("127.0.0.1");
+    RedisClient::ConnectionConfig config("127.0.0.1", "test");
     config.setPort(6379);
     RedisClient::Connection connection(config);   
 
