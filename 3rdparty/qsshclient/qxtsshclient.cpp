@@ -379,12 +379,9 @@ QxtSshClientPrivate::QxtSshClientPrivate()
 
 }
 
-QxtSshClientPrivate::~QxtSshClientPrivate(){
-//    d_reset();
-//    if(d_session){
-//        libssh2_knownhost_free(d_knownHosts);
-//        libssh2_session_free(d_session);
-//    }
+QxtSshClientPrivate::~QxtSshClientPrivate()
+{
+    d_tearDown();
 }
 
 void QxtSshClientPrivate::d_tearDown()
