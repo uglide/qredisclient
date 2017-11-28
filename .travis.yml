@@ -63,7 +63,7 @@ script:
         virtualenv .venv -p python3 &&
         source .venv/bin/activate &&
         pip install -r requirements.txt &&
-        python tests.py
+        python tests.py;
     fi
   - qmake && make
 after_success:
