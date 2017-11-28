@@ -65,10 +65,10 @@ bool RedisClient::SshTransporter::connectToHost()
     if (config.isSshPasswordUsed())
         m_sshClient->setPassphrase(config.sshPassword());
 
-    QString privateKey = config.getSshPrivateKey();
-
-    if (!privateKey.isEmpty()) {
-        m_sshClient->setKeyFiles("", privateKey);
+    if (config.getSshPrivateKey().size() > 0) {
+        QString privateKey = config.getSshPrivateKeyPath();
+        QString publicKey = config.getSshPublicKeyPath();
+        m_sshClient->setKeyFiles(publicKey, privateKey);
     }    
 
     //connect to ssh server
@@ -148,7 +148,11 @@ void RedisClient::SshTransporter::OnSshConnectionError(QxtSshClient::Error error
         return;
     }
 
-    emit errorOccurred(QString("SSH Connection error: %1").arg(getSshErrorString(error)));
+    emit errorOccurred(
+        QString("SSH Connection error(%1): %2")
+                .arg(getSshErrorString(error))
+                .arg(m_sshClient->getLastError())
+    );
 }
 
 void RedisClient::SshTransporter::OnSshSocketDestroyed()

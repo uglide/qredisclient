@@ -14,7 +14,7 @@ void TestSsh::init()
     qRegisterMetaType<RedisClient::Response>("RedisClient::Response");
 
     config = ConnectionConfig("127.0.0.1", "test", 6379, "test");
-    config.setTimeouts(10000, 10000);
+    config.setTimeouts(20000, 20000);
 }
 
 #ifdef SSH_TESTS
@@ -40,7 +40,7 @@ void TestSsh::connectAndCheckTimeout()
     //given
     QString validResponse("+PONG\r\n");
     config.setSshTunnelSettings("127.0.0.1", "rdm", "test", 2200, "");
-    Connection connection(config, false);    
+    Connection connection(config, false);
 
     //when
     QVERIFY(connection.connect());
@@ -49,7 +49,7 @@ void TestSsh::connectAndCheckTimeout()
     QCOMPARE(actualCmdResult.toRawString(), validResponse);
 
     //then
-    QCOMPARE(connection.isConnected(), true);    
+    QCOMPARE(connection.isConnected(), true);
 }
 
 void TestSsh::connectWithSshTunnelKey()
@@ -57,7 +57,8 @@ void TestSsh::connectWithSshTunnelKey()
     //given
     QFETCH(QString, password);
     QFETCH(QString, keyPath);
-    config.setSshTunnelSettings("127.0.0.1", "rdm", password, 2201, keyPath);
+    config.setSshTunnelSettings("127.0.0.1", "rdm", password, 2201,
+                                keyPath, QString("%1.pub").arg(keyPath));
     Connection connection(config, false);
 
     //when

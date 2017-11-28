@@ -92,6 +92,8 @@ public:
 
     QxtSshProcess * openProcessChannel();
     QxtSshTcpSocket * openTcpSocket(const QString & hostName,quint16 port);
+
+    QString getLastError() const;
 signals:
     void connected();
     void disconnected();

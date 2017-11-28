@@ -139,7 +139,7 @@ void TestConnection::subscribeAndUnsubscribe()
     QVERIFY(connectionPublisher.connect());
 
     connection.command(QList<QByteArray>{"SUBSCRIBE", "ch1", "ch2", "ch3"}, this,
-                       [&messagesRecieved](RedisClient::Response r, QString err){
+                       [&messagesRecieved](RedisClient::Response r, QString){
         qDebug() << "recieved msg:" << r.getValue().toList();
         messagesRecieved++;
     });
