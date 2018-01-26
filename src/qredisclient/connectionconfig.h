@@ -137,10 +137,10 @@ protected:
       * Use following methods to implement custom wrappers
       * around ConnectionConfig class
       */
-    template <class T> inline T param(const QString& p) const
+    template <class T> inline T param(const QString& p, T default_value=T()) const
     {
         if (m_parameters.contains(p)) return m_parameters[p].value<T>();
-        return T();
+        return default_value;
     }
 
     template <class T> inline void setParam(const QString& key, T p)
