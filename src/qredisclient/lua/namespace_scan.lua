@@ -3,7 +3,7 @@ local root_keys = {}
 
 local cursor = "0"
 local ns_s = ARGV[1] or ":"
-local filter = ARGV[2] or "A:New:Key:*" --"*"
+local filter = ARGV[2] or "*"
 local local_key_part_index = string.find(filter, ns_s .. "[^" .. ns_s .. "]*$")
 
 if local_key_part_index == nil then
@@ -32,11 +32,7 @@ repeat
                 root_namespaces[full_ns] = root_namespaces[full_ns] + 1
             end
         end
-    end
-
-    if cursor == "0" then
-        break
-    end
-until true
+    end    
+until cursor == "0"
 
 return { cjson.encode(root_namespaces), cjson.encode(root_keys) }
