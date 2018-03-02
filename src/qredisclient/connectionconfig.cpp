@@ -184,6 +184,16 @@ void RedisClient::ConnectionConfig::setSshTunnelSettings(QString host,
     m_parameters.insert("ssh_public_key_path", sshPublickeyPath);
 }
 
+bool RedisClient::ConnectionConfig::overrideClusterHost() const
+{
+    return param<bool>("cluster_host_override", false);
+}
+
+void RedisClient::ConnectionConfig::setClusterHostOverride(bool v)
+{
+    m_parameters.insert("cluster_host_override", v);
+}
+
 bool RedisClient::ConnectionConfig::isNull() const
 {
     return param<QString>("host").isEmpty()

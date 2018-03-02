@@ -235,8 +235,14 @@ void RedisClient::AbstractTransporter::processClusterRedirect(QSharedPointer<Run
     runningCommand.clear();
     m_loopTimer->stop();
 
-    QString host = response.getRedirectionHost();
+    QString host;
     int port = response.getRedirectionPort();
+
+    if (m_connection->m_config.overrideClusterHost()) {
+        host = response.getRedirectionHost();
+    } else {
+        host = m_connection->m_config.host();
+    }
 
     QTimer::singleShot(1, this, [this, host, port]() {
         reconnectTo(host, port);

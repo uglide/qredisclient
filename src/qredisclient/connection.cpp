@@ -296,7 +296,11 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const
             waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::connected);
             waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
 
-            reconnectTo(h.first, h.second);
+            if (m_config.overrideClusterHost()) {
+                reconnectTo(h.first, h.second);
+            } else {
+                reconnectTo(m_config.host(), h.second);
+            }
 
             qDebug() << "Wait for reconnect...";
 
@@ -516,28 +520,25 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes()
     Response r;
 
     try {
-        r = internalCommandSync({"CLUSTER", "NODES"});
+        r = internalCommandSync({"CLUSTER", "SLOTS"});
     } catch (const Exception& e) {
         emit error(QString("Cannot retrive nodes list").arg(e.what()));
         return result;
     }
 
-    QStringList lines = r.getValue().toString().split("\n");
+    QVariantList slotsList = r.getValue().toList();
 
-    foreach (QString line, lines) {
-        QStringList parts = line.split(" ");
+    foreach (QVariant clusterSlot, slotsList) {
+        QVariantList details = clusterSlot.toList();
 
-        if (parts.size() < 3)
+        if (details.size() < 3)
             continue;
 
-        int indexOfSep = parts[1].indexOf(":");
+        QVariantList masterDetails = details[2].toList();
 
-        if (indexOfSep == -1 || parts[2] != "master")
-            continue;
-
-        result.append({parts[1].mid(0, indexOfSep),
-                       parts[1].mid(indexOfSep+1).toInt()});
-
+        result.append(
+            {masterDetails[0].toString(), masterDetails[1].toInt()}
+        );
     }
 
     return result;

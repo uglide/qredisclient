@@ -118,6 +118,12 @@ public:
                               QString sshPublickeyPath = "");
 
     /*
+     * Cluster settings
+     */
+    bool overrideClusterHost() const;
+    void setClusterHostOverride(bool v);
+
+    /*
      * Convert config to JSON
      */
     QJsonObject toJsonObject();
