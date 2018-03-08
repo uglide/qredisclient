@@ -393,13 +393,16 @@ void QxtSshClientPrivate::d_tearDown()
 
     if(d_state>1){
         libssh2_session_disconnect(d_session,"good bye!");
-
-        if(d_knownHosts){
-            libssh2_knownhost_free(d_knownHosts);
-        }
     }
+
+    if(d_knownHosts){
+        libssh2_knownhost_free(d_knownHosts);
+        d_knownHosts=nullptr;
+    }
+
     if(d_session){
         libssh2_session_free(d_session);
+        d_session=nullptr;
     }
 
     d_state=0;
