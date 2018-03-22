@@ -58,7 +58,7 @@ bool RedisClient::Connection::connect(bool wait)
     QObject::connect(m_transporter.data(), &AbstractTransporter::errorOccurred,
                      this, [this](const QString& err) {
         disconnect();
-        emit error(QString("Disconect on error: %1").arg(err));
+        emit error(QString("Disconnect on error: %1").arg(err));
     });
     QObject::connect(this, &Connection::authError, this, [this](const QString&) {
         disconnect();
