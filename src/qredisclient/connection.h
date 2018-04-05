@@ -122,6 +122,11 @@ public:
      */
     virtual DatabaseList getKeyspaceInfo();
 
+    /**
+     * @brief update internal structure for methods getServerVersion() and getKeyspaceInfo()
+     */
+    virtual void refreshServerInfo();
+
     /*
      * Hi-Level Operations API
      */

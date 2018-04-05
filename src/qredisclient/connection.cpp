@@ -271,6 +271,12 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo()
     return m_serverInfo.databases;
 }
 
+void RedisClient::Connection::refreshServerInfo()
+{
+    Response infoResult = internalCommandSync({"INFO", "ALL"});
+    m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
+}
+
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const QString &pattern)
 {
     if (mode() != Mode::Cluster) {
@@ -561,8 +567,7 @@ void RedisClient::Connection::auth()
             return;
         }
 
-        Response infoResult = internalCommandSync({"INFO", "ALL"});
-        m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
+        refreshServerInfo();
 
         // TODO(u_glide): add option to disable automatic mode switching
         if (m_serverInfo.clusterMode) {
