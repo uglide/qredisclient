@@ -279,21 +279,14 @@ void RedisClient::Connection::refreshServerInfo()
 
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const QString &pattern)
 {
-    if (mode() != Mode::Cluster) {
+     if (mode() != Mode::Cluster) {
         throw Exception("Connection is not in cluster mode");
     }
 
     QSharedPointer<RawKeysList> result(new RawKeysList());
     QSharedPointer<HostList> masterNodes(new HostList(getMasterNodes()));
 
-    m_wrapper = [this, result, masterNodes, callback, pattern](const RawKeysList &res, const QString& err){
-        if (!err.isEmpty()) {
-            qDebug() << "Error in cluster keys retrival:" << err;
-            return callback(RawKeysList(), err);
-        }
-
-        result->append(res);
-
+    std::function<bool(void)> connectToNextNode = [this, masterNodes, callback]() -> bool {
         if (masterNodes->size() > 0) {
             Host h = masterNodes->first();
             masterNodes->removeFirst();
@@ -308,23 +301,45 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const
                 reconnectTo(m_config.host(), h.second);
             }
 
-            qDebug() << "Wait for reconnect...";
-
-            if (!waiter.wait()) {
-                qDebug() << "Reconnection failed";
-                return callback(RawKeysList(),
-                                QString("Cannot connect to cluster node %1:%2").arg(h.first).arg(h.second));
-            }
-
-            qDebug() << "Reconnected!";
-
-            return getDatabaseKeys(m_wrapper, pattern);
+            return waiter.wait();
         } else {
-            return callback(*result, QString());
+            return false;
         }
     };
 
-    getDatabaseKeys(m_wrapper, pattern);
+    m_wrapper = [this, result, callback, pattern, connectToNextNode, masterNodes](const RawKeysList &res, const QString& err){
+        if (!err.isEmpty()) {
+            qDebug() << "Error in cluster keys retrival:" << err;
+            return callback(RawKeysList(), err);
+        }
+
+        result->append(res);
+
+        if (masterNodes->size() == 0)
+            return callback(*result, QString());
+
+        if (connectToNextNode()) {
+            return getDatabaseKeys(m_wrapper, pattern);
+        } else {
+            return callback(
+                        *result,
+                        QString("Cannot connect to cluster node %1:%2")
+                        .arg(m_config.host())
+                        .arg(m_config.port())
+            );
+        }
+    };
+
+    if (connectToNextNode()) {
+        getDatabaseKeys(m_wrapper, pattern);
+    } else {
+        return callback(
+                    *result,
+                    QString("Cannot connect to cluster node %1:%2")
+                    .arg(m_config.host())
+                    .arg(m_config.port())
+        );
+    }
 }
 
 void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback, const QString &pattern, uint dbIndex)

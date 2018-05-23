@@ -251,7 +251,8 @@ void RedisClient::AbstractTransporter::processClusterRedirect(QSharedPointer<Run
 
 void RedisClient::AbstractTransporter::reconnectTo(const QString &host, int port)
 {
-    qDebug() << "ReConnect to:" << host << port;
+    qDebug() << "ReConnect to:" << host << port;    
+    emit logEvent(QString("Reconnect to %1:%2").arg(host).arg(port));
 
     auto config = m_connection->getConfig();
     config.setHost(host);

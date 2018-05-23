@@ -186,7 +186,7 @@ void RedisClient::ConnectionConfig::setSshTunnelSettings(QString host,
 
 bool RedisClient::ConnectionConfig::overrideClusterHost() const
 {
-    return param<bool>("cluster_host_override", false);
+    return param<bool>("cluster_host_override", true);
 }
 
 void RedisClient::ConnectionConfig::setClusterHostOverride(bool v)

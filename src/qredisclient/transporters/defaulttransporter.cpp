@@ -161,9 +161,7 @@ void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors)
 }
 
 void RedisClient::DefaultTransporter::reconnect()
-{
-    emit logEvent("Reconnect to host");
-
+{    
     if (m_loopTimer->isActive())
         m_loopTimer->stop();
 

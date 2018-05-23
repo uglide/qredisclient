@@ -162,9 +162,7 @@ void RedisClient::SshTransporter::OnSshSocketDestroyed()
 }
 
 void RedisClient::SshTransporter::reconnect()
-{
-    emit logEvent("Reconnect to host");
-
+{    
     if (m_loopTimer->isActive())
         m_loopTimer->stop();
 
