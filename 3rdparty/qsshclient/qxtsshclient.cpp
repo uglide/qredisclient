@@ -259,16 +259,24 @@ bool QxtSshClient::saveKnownHosts(const QString & file,KnownHostsFormat c) const
 bool QxtSshClient::addKnownHost(const QString & hostname,const QxtSshKey & key){
     int typemask=LIBSSH2_KNOWNHOST_TYPE_PLAIN | LIBSSH2_KNOWNHOST_KEYENC_RAW;
     switch (key.type){
-        case QxtSshKey::Dss:
+        case LIBSSH2_HOSTKEY_TYPE_DSS:
             typemask|=LIBSSH2_KNOWNHOST_KEY_SSHDSS;
             break;
-        case QxtSshKey::Rsa:
+        case LIBSSH2_HOSTKEY_TYPE_RSA:
             typemask|=LIBSSH2_KNOWNHOST_KEY_SSHRSA;
             break;
-        case QxtSshKey::UnknownType:
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_256:
+            typemask|=LIBSSH2_KNOWNHOST_KEY_ECDSA_256;
+            break;
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_384:
+            typemask|=LIBSSH2_KNOWNHOST_KEY_ECDSA_384;
+            break;
+        case LIBSSH2_HOSTKEY_TYPE_ECDSA_521:
+            typemask|=LIBSSH2_KNOWNHOST_KEY_ECDSA_521;
+            break;
+        case LIBSSH2_HOSTKEY_TYPE_UNKNOWN:
             return false;
     };
-
 
     return(libssh2_knownhost_add(d->d_knownHosts, qPrintable(hostname),
                                  NULL, key.key.data(), key.key.size(),
@@ -441,16 +449,8 @@ void QxtSshClientPrivate::d_readyRead(){
         const char * fingerprint = libssh2_session_hostkey(d_session, &len, &type);
         d_hostKey.key=QByteArray(fingerprint,len);
         d_hostKey.hash=QByteArray(libssh2_hostkey_hash(d_session,LIBSSH2_HOSTKEY_HASH_MD5),16);
-        switch (type){
-            case LIBSSH2_HOSTKEY_TYPE_RSA:
-                d_hostKey.type=QxtSshKey::Rsa;
-                break;
-            case LIBSSH2_HOSTKEY_TYPE_DSS:
-                d_hostKey.type=QxtSshKey::Dss;
-                break;
-            default:
-                d_hostKey.type=QxtSshKey::UnknownType;
-        }
+        d_hostKey.type = type;
+
         if(fingerprint) {
             struct libssh2_knownhost *host;
             int check = libssh2_knownhost_check(d_knownHosts, qPrintable(d_hostName),

@@ -34,17 +34,13 @@
 
 #include <QObject>
 #include <QList>
+#include <libssh2.h>
 
 class QxtSshKey{
  public:
-    enum Type{
-        UnknownType,
-        Rsa,
-        Dss
-    };
     QByteArray hash;
     QByteArray key;
-    Type type;
+    int type;
 };
 
 
@@ -133,21 +129,5 @@ inline QDebug operator<< (QDebug d, const QxtSshClient::AuthenticationMethod  & 
     }
     return d;
 }
-inline QDebug operator<< (QDebug d, const QxtSshKey::Type  & m){
-    switch(m){
-        case QxtSshKey::Dss:
-            d<<"QxtSshKey::Dss";
-            break;
-        case QxtSshKey::Rsa:
-            d<<"QxtSshKey::Rsa";
-            break;
-        case QxtSshKey::UnknownType:
-            d<<"QxtSshKey::UnknownType";
-            break;
-    }
-    return d;
-}
-
-
 
 #endif
