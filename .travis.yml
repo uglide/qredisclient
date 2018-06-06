@@ -37,7 +37,7 @@ install:
   (sudo service dropbear stop || true) &&
   sudo dropbear -E -I 10 -p 2200 && 
   sudo dropbear -E -I 10 -s -p 2201; fi
-- pushd 3rdparty/qsshclient/ && ./configure && popd
+- pushd 3rdparty/qsshclient/ && bash configure && popd
 - sudo rm -f /usr/bin/gcov
 - sudo rm -f /usr/bin/gcc
 - sudo rm -f /usr/bin/g++
