@@ -1,6 +1,6 @@
 #include "sshtransporter.h"
 
-#include <qsshclient/qxtsshtcpsocket.h>
+#include <qsshtcpsocket.h>
 
 #include "qredisclient/connection.h"
 #include "qredisclient/connectionconfig.h"
@@ -18,8 +18,8 @@ RedisClient::SshTransporter::SshTransporter(RedisClient::Connection *c)
 
 void RedisClient::SshTransporter::initSocket()
 {
-    m_sshClient = QSharedPointer<QxtSshClient>(new QxtSshClient);
-    connect(m_sshClient.data(), &QxtSshClient::error, this, &RedisClient::SshTransporter::OnSshConnectionError);
+    m_sshClient = QSharedPointer<QSshClient>(new QSshClient);
+    connect(m_sshClient.data(), &QSshClient::error, this, &RedisClient::SshTransporter::OnSshConnectionError);
 }
 
 void RedisClient::SshTransporter::disconnectFromHost()
@@ -74,8 +74,8 @@ bool RedisClient::SshTransporter::connectToHost()
     //connect to ssh server
     SignalWaiter waiter(config.connectionTimeout());
     waiter.addAbortSignal(this, &RedisClient::SshTransporter::errorOccurred);
-    waiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::disconnected);
-    waiter.addSuccessSignal(m_sshClient.data(), &QxtSshClient::connected);
+    waiter.addAbortSignal(m_sshClient.data(), &QSshClient::disconnected);
+    waiter.addSuccessSignal(m_sshClient.data(), &QSshClient::connected);
 
     emit logEvent("Connecting to SSH host...");
 
@@ -116,12 +116,12 @@ bool RedisClient::SshTransporter::openTcpSocket()
     }
 
     SignalWaiter socketWaiter(config.connectionTimeout());
-    socketWaiter.addAbortSignal(m_socket, &QxtSshTcpSocket::destroyed);
-    socketWaiter.addAbortSignal(m_sshClient.data(), &QxtSshClient::disconnected);
-    socketWaiter.addSuccessSignal(m_socket, &QxtSshTcpSocket::readyRead);
+    socketWaiter.addAbortSignal(m_socket, &QSshTcpSocket::destroyed);
+    socketWaiter.addAbortSignal(m_sshClient.data(), &QSshClient::disconnected);
+    socketWaiter.addSuccessSignal(m_socket, &QSshTcpSocket::readyRead);
 
-    connect(m_socket, &QxtSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);
-    connect(m_socket, &QxtSshTcpSocket::destroyed, this, &RedisClient::SshTransporter::OnSshSocketDestroyed);
+    connect(m_socket, &QSshTcpSocket::readyRead, this, &RedisClient::AbstractTransporter::readyRead);
+    connect(m_socket, &QSshTcpSocket::destroyed, this, &RedisClient::SshTransporter::OnSshSocketDestroyed);
 
     if (!m_socket->isOpen() && !socketWaiter.wait()) {
         emit errorOccurred(QString("SSH connection established, but redis connection failed"));
@@ -134,10 +134,10 @@ bool RedisClient::SshTransporter::openTcpSocket()
     return true;
 }
 
-void RedisClient::SshTransporter::OnSshConnectionError(QxtSshClient::Error error)
+void RedisClient::SshTransporter::OnSshConnectionError(QSshClient::Error error)
 {
-    if (!m_isHostKeyAlreadyAdded && QxtSshClient::HostKeyUnknownError == error) {
-        QxtSshKey hostKey = m_sshClient->hostKey();
+    if (!m_isHostKeyAlreadyAdded && QSshClient::HostKeyUnknownError == error) {
+        QSshKey hostKey = m_sshClient->hostKey();
         m_sshClient->addKnownHost(m_connection->getConfig().sshHost(), hostKey);
         m_sshClient->resetState();
         m_sshClient->connectToHost(m_connection->getConfig().sshUser(),

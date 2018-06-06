@@ -1,7 +1,7 @@
 #pragma once
 #include <QEventLoop>
 #include <QTimer>
-#include <qsshclient/qxtsshclient.h>
+#include <qsshclient.h>
 
 #include "abstracttransporter.h"
 
@@ -37,12 +37,12 @@ private:
     bool openTcpSocket();
 
 private slots:
-    void OnSshConnectionError(QxtSshClient::Error);
+    void OnSshConnectionError(QSshClient::Error);
     void OnSshSocketDestroyed();
 
 private:
-    QxtSshTcpSocket * m_socket; // owner of this object is sshClient
-    QSharedPointer<QxtSshClient> m_sshClient;
+    QSshTcpSocket * m_socket; // owner of this object is sshClient
+    QSharedPointer<QSshClient> m_sshClient;
 
     bool m_isHostKeyAlreadyAdded;
 };

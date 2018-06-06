@@ -1,6 +1,6 @@
 # Core deps 
 # Read API from hiredis
-INCLUDEPATH += $$PWD/hiredis
+INCLUDEPATH += $$PWD/
 DEPENDPATH += $$PWD/hiredis
 HEADERS += $$PWD/hiredis/read.h \
            $$PWD/hiredis/sds.h
