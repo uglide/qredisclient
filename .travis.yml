@@ -37,14 +37,7 @@ install:
   (sudo service dropbear stop || true) &&
   sudo dropbear -E -I 10 -p 2200 && 
   sudo dropbear -E -I 10 -s -p 2201; fi
-- git clone https://github.com/libssh2/libssh2.git libssh2
-- cd libssh2
-- git checkout libssh2-1.8.0
-- mkdir bin && cd bin
-- cmake -DCRYPTO_BACKEND=OpenSSL -DENABLE_ZLIB_COMPRESSION=ON ..
-- cmake --build .
-- sudo make install
-- cd ../../
+- pushd 3rdparty/qsshclient/ && ./configure && popd
 - sudo rm -f /usr/bin/gcov
 - sudo rm -f /usr/bin/gcc
 - sudo rm -f /usr/bin/g++
