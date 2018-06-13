@@ -7,8 +7,7 @@ RedisClient::ConnectionConfig::ConnectionConfig(const QString &host, const QStri
     m_parameters.insert("name", name);
     m_parameters.insert("auth", auth);
     m_parameters.insert("host", host);
-    m_parameters.insert("port", port);
-    m_parameters.insert("ssh_port", DEFAULT_SSH_PORT);
+    m_parameters.insert("port", port);    
     m_parameters.insert("timeout_connect", DEFAULT_TIMEOUT_IN_MS);
     m_parameters.insert("timeout_execute", DEFAULT_TIMEOUT_IN_MS);
 }
@@ -163,7 +162,7 @@ QString RedisClient::ConnectionConfig::sshHost() const
 
 uint RedisClient::ConnectionConfig::sshPort() const
 {
-    return param<uint>("ssh_port");
+    return param<uint>("ssh_port", DEFAULT_SSH_PORT);
 }
 
 QVariantHash RedisClient::ConnectionConfig::getInternalParameters() const
