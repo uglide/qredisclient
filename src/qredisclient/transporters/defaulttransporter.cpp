@@ -69,7 +69,9 @@ bool RedisClient::DefaultTransporter::connectToHost()
     if (conf.useSsl()) {
 
         if (!QSslSocket::supportsSsl()) {
-            emit errorOccurred("SSL Error: Openssl is missing. Please install Openssl.");
+            emit errorOccurred(
+                        QString("SSL Error: Openssl is missing. Please install Openssl (%1)")
+                            .arg(QSslSocket::sslLibraryBuildVersionString()));
             return false;
         }
 
