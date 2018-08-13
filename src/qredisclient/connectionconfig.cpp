@@ -202,7 +202,7 @@ bool RedisClient::ConnectionConfig::isNull() const
 bool RedisClient::ConnectionConfig::useSshTunnel() const
 {
     return !param<QString>("ssh_host").isEmpty()
-            && param<int>("ssh_port") > 0
+            && sshPort() > 0
             && !param<QString>("ssh_user").isEmpty()
             && (!param<QString>("ssh_password").isEmpty()
                 || !param<QString>("ssh_private_key_path").isEmpty());
