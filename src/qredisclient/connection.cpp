@@ -261,6 +261,11 @@ RedisClient::Connection::Mode RedisClient::Connection::mode() const
     return m_currentMode;
 }
 
+int RedisClient::Connection::dbIndex() const
+{
+    return m_dbNumber;
+}
+
 double RedisClient::Connection::getServerVersion()
 {
     return m_serverInfo.version;

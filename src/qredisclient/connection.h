@@ -111,6 +111,12 @@ public:
     Mode mode() const;
 
     /**
+     * @brief Get current db index
+     * @return int
+     */
+    int dbIndex() const;
+
+    /**
      * @brief Get redis-server version
      * @return
      */
