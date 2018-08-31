@@ -142,6 +142,7 @@ public:
     bool isSelectCommand() const;
     bool isSubscriptionCommand() const;
     bool isUnSubscriptionCommand() const;
+    bool isAuthCommand() const;
 
 public:
     /**

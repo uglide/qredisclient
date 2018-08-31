@@ -130,6 +130,14 @@ bool RedisClient::Command::isUnSubscriptionCommand() const
             || m_commandWithArguments.at(0).toLower() == "punsubscribe";
 }
 
+bool RedisClient::Command::isAuthCommand() const
+{
+    if (m_commandWithArguments.length() < 2)
+        return false;
+
+    return m_commandWithArguments.at(0).toLower() == "auth";
+}
+
 bool RedisClient::Command::isHiPriorityCommand() const
 {
     return m_hiPriorityCommand;
@@ -147,6 +155,8 @@ QObject *RedisClient::Command::getOwner() const
 
 QByteArray RedisClient::Command::getRawString(int limit) const
 {
+    if (isAuthCommand())
+        return QByteArray("AUTH *******");
 
     return (limit > 0)? m_commandWithArguments.join(' ').left(limit)
                   : m_commandWithArguments.join(' ');
