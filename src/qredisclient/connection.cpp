@@ -284,66 +284,80 @@ void RedisClient::Connection::refreshServerInfo()
 
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback, const QString &pattern)
 {
-     if (mode() != Mode::Cluster) {
+    if (mode() != Mode::Cluster) {
         throw Exception("Connection is not in cluster mode");
     }
 
     QSharedPointer<RawKeysList> result(new RawKeysList());
-    QSharedPointer<HostList> masterNodes(new HostList(getMasterNodes()));
+    m_notVisitedMasterNodes = QSharedPointer<HostList>(new HostList(getMasterNodes()));
 
-    std::function<bool(void)> connectToNextNode = [this, masterNodes, callback]() -> bool {
-        if (masterNodes->size() > 0) {
-            Host h = masterNodes->first();
-            masterNodes->removeFirst();
-
-            SignalWaiter waiter(m_config.connectionTimeout());
-            waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::connected);
-            waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
-
-            if (m_config.overrideClusterHost()) {
-                reconnectTo(h.first, h.second);
-            } else {
-                reconnectTo(m_config.host(), h.second);
-            }
-
-            return waiter.wait();
-        } else {
-            return false;
-        }
-    };
-
-    m_wrapper = [this, result, callback, pattern, connectToNextNode, masterNodes](const RawKeysList &res, const QString& err){
-        if (!err.isEmpty()) {
-            qDebug() << "Error in cluster keys retrival:" << err;
-            return callback(RawKeysList(), err);
-        }
-
-        result->append(res);
-
-        if (masterNodes->size() == 0)
-            return callback(*result, QString());
-
-        if (connectToNextNode()) {
+    auto runOperationForNextNode = [this, pattern, callback, result]() {
+        if (clusterConnectToNextMasterNode()) {
             return getDatabaseKeys(m_wrapper, pattern);
         } else {
             return callback(
                         *result,
-                        QString("Cannot connect to cluster node %1:%2")
+                        QObject::tr("Cannot connect to cluster node %1:%2")
                         .arg(m_config.host())
                         .arg(m_config.port())
             );
         }
     };
 
-    if (connectToNextNode()) {
-        getDatabaseKeys(m_wrapper, pattern);
+    m_wrapper = [this, result, callback, runOperationForNextNode](const RawKeysList &res, const QString& err){
+        if (!err.isEmpty()) {            
+            return callback(RawKeysList(), err);
+        }
+
+        result->append(res);
+
+        if (!hasNotVisitedClusterNodes())
+            return callback(*result, QString());
+
+        runOperationForNextNode();
+    };
+
+    runOperationForNextNode();
+}
+
+void RedisClient::Connection::flushDbKeys(uint dbIndex, std::function<void(const QString&)> callback)
+{
+    auto runOperationForNextNode = [this, dbIndex, callback]() {
+        if (clusterConnectToNextMasterNode()) {
+            return command({"FLUSHDB"}, this, m_cmdCallback, dbIndex);
+        } else {
+            return callback(
+                        QObject::tr("Cannot connect to cluster node %1:%2")
+                        .arg(m_config.host())
+                        .arg(m_config.port())
+            );
+        }
+    };
+
+    m_cmdCallback = [this, callback, dbIndex, runOperationForNextNode]
+            (const RedisClient::Response&, const QString& error)
+    {
+        if (!error.isEmpty()) {
+          callback(QString(QObject::tr("Cannot flush db (%1): %2")).arg(dbIndex).arg(error));
+          return;
+        }
+
+        if (mode() == Mode::Cluster) {
+            if (!hasNotVisitedClusterNodes())
+                return callback(QString());
+
+            runOperationForNextNode();
+        } else {
+            callback(QString());
+        }
+    };
+
+    if (mode() == Mode::Cluster) {
+        m_notVisitedMasterNodes = QSharedPointer<HostList>(new HostList(getMasterNodes()));
+
+        runOperationForNextNode();
     } else {
-        return callback(
-                    *result,
-                    QString("Cannot connect to cluster node %1:%2")
-                    .arg(m_config.host())
-                    .arg(m_config.port())
-        );
+        command({"FLUSHDB"}, this, m_cmdCallback, dbIndex);
     }
 }
 
@@ -533,6 +547,33 @@ void RedisClient::Connection::changeCurrentDbNumber(int db)
     } else {
         qWarning() << "Cannot lock db number mutex!";
     }
+}
+
+bool RedisClient::Connection::clusterConnectToNextMasterNode()
+{
+    if (!hasNotVisitedClusterNodes()) {
+         return false;
+    }
+
+    Host h = m_notVisitedMasterNodes->first();
+    m_notVisitedMasterNodes->removeFirst();
+
+    SignalWaiter waiter(m_config.connectionTimeout());
+    waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::connected);
+    waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
+
+    if (m_config.overrideClusterHost()) {
+        reconnectTo(h.first, h.second);
+    } else {
+        reconnectTo(m_config.host(), h.second);
+    }
+
+    return waiter.wait();
+}
+
+bool RedisClient::Connection::hasNotVisitedClusterNodes() const
+{
+    return m_notVisitedMasterNodes && m_notVisitedMasterNodes->size() > 0;
 }
 
 RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes()

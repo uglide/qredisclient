@@ -170,6 +170,10 @@ public:
     virtual void getClusterKeys(RawKeysListCallback callback,
                                 const QString &pattern);
 
+    /**
+     * @brief flushDbKeys - Remove keys on all master nodes
+     */
+    virtual void flushDbKeys(uint dbIndex, std::function<void(const QString&)> callback);
 
     typedef QPair<QString, int> Host;
     typedef QList<Host> HostList;
@@ -298,6 +302,10 @@ protected:
 
     void changeCurrentDbNumber(int db);    
 
+    bool clusterConnectToNextMasterNode();
+
+    bool hasNotVisitedClusterNodes() const;
+
 protected slots:
     void auth();
 
@@ -313,5 +321,8 @@ protected:
     bool m_autoConnect;    
     bool m_stoppingTransporter;
     RawKeysListCallback m_wrapper;
+    RedisClient::Command::Callback m_cmdCallback;
+    QSharedPointer<HostList> m_notVisitedMasterNodes;
+
 };
 }
