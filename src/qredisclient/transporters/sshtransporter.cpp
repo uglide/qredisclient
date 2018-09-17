@@ -30,9 +30,9 @@ void RedisClient::SshTransporter::disconnectFromHost()
     m_loopTimer->stop();
 
     if (m_socket)
-        QObject::disconnect(m_socket, 0, 0, 0);
+        QObject::disconnect(m_socket, 0, this, 0);
 
-    QObject::disconnect(m_sshClient.data(), 0, 0, 0);
+    QObject::disconnect(m_sshClient.data(), 0, this, 0);
 
     m_sshClient->disconnectFromHost();
     m_sshClient.clear();
@@ -167,9 +167,8 @@ void RedisClient::SshTransporter::reconnect()
         m_loopTimer->stop();
 
     if (m_socket) {
+        QObject::disconnect(m_socket, 0, this, 0);
         m_socket->close();
-        QObject::disconnect(m_socket, 0, 0, 0);
-        delete m_socket;
         m_socket = nullptr;
     }
 
