@@ -282,6 +282,7 @@ signals:
     void error(const QString&);
     void log(const QString&);
     void connected();
+    void shutdownStart();
     void disconnected();
     void authOk();
     void authError(const QString&);

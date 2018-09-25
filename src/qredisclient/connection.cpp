@@ -70,6 +70,7 @@ bool RedisClient::Connection::connect(bool wait)
     if (wait) {
         waiter.addAbortSignal(m_transporter.data(), &AbstractTransporter::errorOccurred);
         waiter.addAbortSignal(this, &Connection::authError);        
+        waiter.addAbortSignal(this, &Connection::shutdownStart);
         waiter.addSuccessSignal(this, &Connection::authOk);                    
     } else {       
         waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);                       
@@ -86,10 +87,11 @@ bool RedisClient::Connection::isConnected()
 
 void RedisClient::Connection::disconnect()
 {
+    emit shutdownStart();
     if (isTransporterRunning()) {
-        m_stoppingTransporter = true;
+        m_stoppingTransporter = true;       
         m_transporterThread->quit();
-        m_transporterThread->wait();        
+        m_transporterThread->wait();
         m_transporter.clear();
         m_stoppingTransporter = false;
     }
@@ -202,7 +204,8 @@ void RedisClient::Connection::runCommand(const Command &cmd)
     // wait for signal from transporter
     SignalWaiter waiter(m_config.executeTimeout());
     waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::commandAdded);
-    waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);   
+    waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
+    waiter.addAbortSignal(this, &Connection::shutdownStart);
 
     emit addCommandToWorker(cmd);
     waiter.wait();
@@ -561,6 +564,7 @@ bool RedisClient::Connection::clusterConnectToNextMasterNode()
     SignalWaiter waiter(m_config.connectionTimeout());
     waiter.addSuccessSignal(m_transporter.data(), &RedisClient::AbstractTransporter::connected);
     waiter.addAbortSignal(m_transporter.data(), &RedisClient::AbstractTransporter::errorOccurred);
+    waiter.addAbortSignal(this, &Connection::shutdownStart);
 
     if (m_config.overrideClusterHost()) {
         reconnectTo(h.first, h.second);
