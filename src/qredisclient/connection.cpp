@@ -47,6 +47,8 @@ bool RedisClient::Connection::connect(bool wait) {
   QObject::connect(m_transporterThread.data(), &QThread::finished,
                    m_transporter.data(),
                    &AbstractTransporter::disconnectFromHost);
+  QObject::connect(this, &Connection::shutdownStart, m_transporter.data(),
+                   &AbstractTransporter::disconnectFromHost);
   QObject::connect(m_transporter.data(), &AbstractTransporter::connected, this,
                    &Connection::auth);
   QObject::connect(m_transporter.data(), &AbstractTransporter::errorOccurred,
