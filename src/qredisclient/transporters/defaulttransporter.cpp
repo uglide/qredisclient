@@ -96,9 +96,14 @@ bool RedisClient::DefaultTransporter::connectToHost()
         m_socket->connectToHostEncrypted(conf.host(), conf.port());
         connectionResult = m_socket->waitForEncrypted(conf.connectionTimeout());
 
-    } else {
+    } else {                
+        SignalWaiter socketWaiter(conf.connectionTimeout());
+        socketWaiter.addAbortSignal(m_socket.data(), static_cast<void(QAbstractSocket::*)(QAbstractSocket::SocketError)>(&QAbstractSocket::error));
+        socketWaiter.addAbortSignal(m_socket.data(), &QAbstractSocket::disconnected);
+        socketWaiter.addSuccessSignal(m_socket.data(), &QAbstractSocket::connected);
+
         m_socket->connectToHost(conf.host(), conf.port());
-        connectionResult = m_socket->waitForConnected(conf.connectionTimeout());
+        connectionResult = socketWaiter.wait();
     }
 
     if (connectionResult)
