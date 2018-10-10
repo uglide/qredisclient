@@ -1,9 +1,10 @@
-#include <cctype>
-#include <QTextCodec>
-#include <QString>
+#pragma once
 #include <QByteArray>
+#include <QString>
+#include <QTextCodec>
+#include <cctype>
 
-QString printableString(const QByteArray& raw);
+QString printableString(const QByteArray& raw, bool strictChecks = false);
 
 bool isBinary(const QByteArray& raw);
 

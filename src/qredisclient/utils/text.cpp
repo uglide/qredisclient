@@ -1,14 +1,20 @@
 #include "text.h"
 #include <functional>
 
-bool byteArrayToValidUnicode(const QByteArray &raw, QString *result = nullptr) {
+bool byteArrayToValidUnicode(const QByteArray &raw, QString *result = nullptr,
+                             bool strict = false) {
   QTextCodec::ConverterState state;
   QTextCodec *codec = QTextCodec::codecForName("UTF-8");
   const QString text = codec->toUnicode(raw.constData(), raw.size(), &state);
 
   if (state.invalidChars == 0) {
     foreach (QChar c, text) {
-      if (!c.isPrint() || (c.isSpace() && c != ' ')) return false;
+      if (strict) {
+        if (!c.isPrint() || (c.isSpace() && c != ' ')) return false;
+      } else {
+        if (c.isSpace()) continue;
+        if (!c.isPrint()) return false;
+      }
     }
 
     if (result) *result = text;
@@ -17,17 +23,26 @@ bool byteArrayToValidUnicode(const QByteArray &raw, QString *result = nullptr) {
   return false;
 }
 
-QString printableString(const QByteArray &raw) {
+QString printableString(const QByteArray &raw, bool strictChecks) {
   QString text;
 
-  if (byteArrayToValidUnicode(raw, &text)) return text;
+  if (byteArrayToValidUnicode(raw, &text, strictChecks)) return text;
 
   QByteArray escapedBinaryString;
   char const hex[16] = {'0', '1', '2', '3', '4', '5', '6', '7',
                         '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
 
+  bool printableChar = false;
+
   foreach (char i, raw) {
-    if (isprint((unsigned char)i) && (!isspace((unsigned char)i) || i == ' ')) {
+    if (strictChecks) {
+      printableChar =
+          isprint((unsigned char)i) && (!isspace((unsigned char)i) || i == ' ');
+    } else {
+      printableChar = isprint((unsigned char)i);
+    }
+
+    if (printableChar) {
       escapedBinaryString.append(i);
     } else {
       escapedBinaryString.append("\\x");
@@ -38,7 +53,9 @@ QString printableString(const QByteArray &raw) {
   return escapedBinaryString;
 }
 
-bool isBinary(const QByteArray &raw) { return !byteArrayToValidUnicode(raw); }
+bool isBinary(const QByteArray &raw) {
+  return !byteArrayToValidUnicode(raw, nullptr, false);
+}
 
 QByteArray printableStringToBinary(const QString &str) {
   QByteArray utfData = str.toUtf8();
