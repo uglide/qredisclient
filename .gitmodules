@@ -1,9 +1,3 @@
-[submodule "3rdparty/libssh2"]
-	path = 3rdparty/libssh2
-	url = https://github.com/libssh2/libssh2.git
 [submodule "3rdparty/hiredis"]
 	path = 3rdparty/hiredis
 	url = https://github.com/redis/hiredis.git
-[submodule "3rdparty/qsshclient"]
-	path = 3rdparty/qsshclient
-	url = https://github.com/uglide/qsshclient.git

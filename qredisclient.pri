@@ -16,5 +16,9 @@ INCLUDEPATH += $$PWD/src/
 
 include($$PWD/3rdparty/3rdparty.pri)
 
+exists($$PWD/src/qredisclient/transporters/ssh/ssh.pri) {
+    include($$PWD/src/qredisclient/transporters/ssh/ssh.pri)
+}
+
 RESOURCES += \
     $$PWD/lua.qrc
