@@ -42,4 +42,4 @@ int main(int argc, char *argv[])
 
 ```
 
-***Supported Qt versions:*** 5.4-5.9
+***Supported Qt versions:*** 5.6-5.9
