@@ -1,5 +1,4 @@
 #pragma once
-#include <hiredis/read.h>
 #include <QByteArray>
 #include <QSharedPointer>
 #include <QString>
@@ -7,6 +6,10 @@
 #include <QVector>
 
 #include "exception.h"
+
+struct redisReader;
+struct redisReadTask;
+struct redisReplyObjectFunctions;
 
 namespace RedisClient {
 class Response {
@@ -77,10 +80,7 @@ class Response {
 
   static const redisReplyObjectFunctions defaultFunctions;
 
-  static redisReader *redisReaderCreate(void) {
-    return redisReaderCreateWithFunctions(
-        const_cast<redisReplyObjectFunctions *>(&defaultFunctions));
-  }
+  static redisReader *redisReaderCreate(void);
 };
 }  // namespace RedisClient
 

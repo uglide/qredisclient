@@ -1,4 +1,5 @@
 #include "response.h"
+#include <hiredis/read.h>
 #include <QDebug>
 #include <QObject>
 #include <QVariantList>
@@ -193,6 +194,11 @@ void RedisClient::Response::freeObject(void* obj) {
   }
 
   delete o;
+}
+
+redisReader* RedisClient::Response::redisReaderCreate() {
+  return redisReaderCreateWithFunctions(
+      const_cast<redisReplyObjectFunctions*>(&defaultFunctions));
 }
 
 RedisClient::Response::Type RedisClient::Response::getResponseType(
