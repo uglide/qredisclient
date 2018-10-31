@@ -662,7 +662,7 @@ void RedisClient::Connection::auth() {
       return;
     }
 
-    emit log("AUTH OK");
+    emit log("Connected");
     emit authOk();
     emit connected();
   } catch (const Exception &e) {
