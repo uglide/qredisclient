@@ -229,9 +229,6 @@ QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone() const {
 
 void RedisClient::Connection::retrieveCollection(
     const ScanCommand &cmd, Connection::CollectionCallback callback) {
-  if (getServerVersion() < 2.8)
-    throw Exception("Scan commands not supported by redis-server.");
-
   if (!cmd.isValidScanCommand()) throw Exception("Invalid command");
 
   processScanCommand(cmd, callback);
@@ -240,9 +237,6 @@ void RedisClient::Connection::retrieveCollection(
 void RedisClient::Connection::retrieveCollectionIncrementally(
     const ScanCommand &cmd,
     RedisClient::Connection::IncrementalCollectionCallback callback) {
-  if (getServerVersion() < 2.8)
-    throw Exception("Scan commands not supported by redis-server.");
-
   if (!cmd.isValidScanCommand()) throw Exception("Invalid command");
 
   processScanCommand(cmd,
