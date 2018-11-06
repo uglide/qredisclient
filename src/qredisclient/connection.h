@@ -1,17 +1,17 @@
 #pragma once
-#include <QObject>
+#include <QByteArray>
+#include <QEventLoop>
 #include <QList>
 #include <QMap>
-#include <QByteArray>
-#include <functional>
-#include <QVariantList>
-#include <QSharedPointer>
-#include <QEventLoop>
-#include <QTimer>
 #include <QMutex>
+#include <QObject>
+#include <QSharedPointer>
+#include <QTimer>
+#include <QVariantList>
+#include <functional>
+#include "command.h"
 #include "connectionconfig.h"
 #include "exception.h"
-#include "command.h"
 #include "response.h"
 #include "scancommand.h"
 
@@ -26,304 +26,314 @@ typedef QMap<int, int> DatabaseList;
  * @brief The ServerInfo struct
  * Represents redis-server information parsed from INFO command.
  */
-struct ServerInfo
-{
-    ServerInfo();
+struct ServerInfo {
+  ServerInfo();
 
-    double version;
-    bool clusterMode;
-    bool sentinelMode;
-    DatabaseList databases;    
+  double version;
+  bool clusterMode;
+  bool sentinelMode;
+  DatabaseList databases;
 
-    class ParsedServerInfo : public QHash<QString, QHash<QString, QString>>
-    {
-    public:
-        QVariantMap toVariantMap();
-    };
+  class ParsedServerInfo : public QHash<QString, QHash<QString, QString>> {
+   public:
+    QVariantMap toVariantMap();
+  };
 
-    ParsedServerInfo parsed;
+  ParsedServerInfo parsed;
 
-    static ServerInfo fromString(const QString& info);
+  static ServerInfo fromString(const QString &info);
 };
 
 /**
  * @brief The Connection class
  * Main client class.
  */
-class Connection : public QObject
-{
-    Q_OBJECT
-    ADD_EXCEPTION
+class Connection : public QObject {
+  Q_OBJECT
+  ADD_EXCEPTION
 
-    friend class AbstractTransporter;
+  friend class AbstractTransporter;
 
-public:
-    enum class Mode { Normal, PubSub, Cluster, Sentinel };
-    class InvalidModeException : public Connection::Exception {};
-public:
-    /**
-     * @brief Constructs connection class
-     * @param c - connection config
-     * NOTE: different config options are required for different transporters.
-     */
-    Connection(const ConnectionConfig &c, bool autoConnect=true);
+ public:
+  enum class Mode { Normal, PubSub, Cluster, Sentinel };
+  class InvalidModeException : public Connection::Exception {};
 
-    /**
-     * @brief ~Connection
-     * If connection established internally call disconnect()
-     */
-    virtual ~Connection();
+ public:
+  /**
+   * @brief Constructs connection class
+   * @param c - connection config
+   * NOTE: different config options are required for different transporters.
+   */
+  Connection(const ConnectionConfig &c, bool autoConnect = true);
 
-    /**
-     * @brief connects to redis-server
-     * @param wait -  true = sync mode, false = async mode
-     * @return true - on success
-     * @throws Connection::Exception if config is invalid or something went wrong.
-     */
-    virtual bool connect(bool wait=true);
+  /**
+   * @brief ~Connection
+   * If connection established internally call disconnect()
+   */
+  virtual ~Connection();
 
-    /**
-     * @brief isConnected
-     * @return
-     */
-    virtual bool isConnected();
+  /**
+   * @brief connects to redis-server
+   * @param wait -  true = sync mode, false = async mode
+   * @return true - on success
+   * @throws Connection::Exception if config is invalid or something went wrong.
+   */
+  virtual bool connect(bool wait = true);
 
-    /**
-     * @brief disconnect from redis-server
-     */
-    virtual void disconnect();
+  /**
+   * @brief isConnected
+   * @return
+   */
+  virtual bool isConnected();
 
-    /**
-     * @brief getConfig
-     * @return
-     */
-    ConnectionConfig getConfig() const;
+  /**
+   * @brief disconnect from redis-server
+   */
+  virtual void disconnect();
 
-    /**
-     * @brief setConnectionConfig
-     */
-    void setConnectionConfig(const ConnectionConfig &);
+  /**
+   * @brief getConfig
+   * @return
+   */
+  ConnectionConfig getConfig() const;
 
-    /**
-     * @brief Get current mode
-     * @return
-     */
-    Mode mode() const;
+  /**
+   * @brief setConnectionConfig
+   */
+  void setConnectionConfig(const ConnectionConfig &);
 
-    /**
-     * @brief Get current db index
-     * @return int
-     */
-    int dbIndex() const;
+  /**
+   * @brief Get current mode
+   * @return
+   */
+  Mode mode() const;
 
-    /**
-     * @brief Get redis-server version
-     * @return
-     */
-    virtual double getServerVersion();
+  /**
+   * @brief Get current db index
+   * @return int
+   */
+  int dbIndex() const;
 
-    /**
-     * @brief Get keyspace info parsed from INFO command
-     * @return
-     */
-    virtual DatabaseList getKeyspaceInfo();
+  /**
+   * @brief Get redis-server version
+   * @return
+   */
+  virtual double getServerVersion();
 
-    /**
-     * @brief update internal structure for methods getServerVersion() and getKeyspaceInfo()
-     */
-    virtual void refreshServerInfo();
+  /**
+   * @brief Get keyspace info parsed from INFO command
+   * @return
+   */
+  virtual DatabaseList getKeyspaceInfo();
 
-    /*
-     * Hi-Level Operations API
-     */
-    /**
-     * @brief RawKeysList
-     */
-    typedef QList<QByteArray> RawKeysList;
-    typedef std::function<void(const RawKeysList&, const QString&)> RawKeysListCallback;
+  /**
+   * @brief update internal structure for methods getServerVersion() and
+   * getKeyspaceInfo()
+   */
+  virtual void refreshServerInfo();
 
-    /**
-     * @brief getDatabaseKeys - async keys loading
-     * @param callback
-     * @param pattern
-     * @param dbIndex
-     */
-    virtual void getDatabaseKeys(RawKeysListCallback callback,
-                                 const QString& pattern=QString("*"),
+  /*
+   * Hi-Level Operations API
+   */
+  /**
+   * @brief RawKeysList
+   */
+  typedef QList<QByteArray> RawKeysList;
+  typedef std::function<void(const RawKeysList &, const QString &)>
+      RawKeysListCallback;
+
+  /**
+   * @brief getDatabaseKeys - async keys loading
+   * @param callback
+   * @param pattern
+   * @param dbIndex
+   */
+  virtual void getDatabaseKeys(RawKeysListCallback callback,
+                               const QString &pattern = QString("*"),
+                               uint dbIndex = 0);
+
+  typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
+  typedef QList<QByteArray> RootKeys;
+  typedef QPair<RootNamespaces, RootKeys> NamespaceItems;
+  typedef std::function<void(const NamespaceItems &, const QString &)>
+      NamespaceItemsCallback;
+
+  virtual void getNamespaceItems(NamespaceItemsCallback callback,
+                                 const QString &nsSeparator,
+                                 const QString &pattern = QString("*"),
                                  uint dbIndex = 0);
 
-    typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
-    typedef QList<QByteArray> RootKeys;
-    typedef QPair<RootNamespaces, RootKeys> NamespaceItems;
-    typedef std::function<void(const NamespaceItems&, const QString&)> NamespaceItemsCallback;
+  /**
+   * @brief getClusterKeys - async keys loading from all cluster nodes
+   * @param callback
+   * @param pattern
+   */
+  virtual void getClusterKeys(RawKeysListCallback callback,
+                              const QString &pattern);
 
-    virtual void getNamespaceItems(NamespaceItemsCallback callback,
-                                   const QString &nsSeparator,
-                                   const QString& pattern=QString("*"),
-                                   uint dbIndex = 0);
+  /**
+   * @brief flushDbKeys - Remove keys on all master nodes
+   */
+  virtual void flushDbKeys(uint dbIndex,
+                           std::function<void(const QString &)> callback);
 
-    /**
-     * @brief getClusterKeys - async keys loading from all cluster nodes
-     * @param callback
-     * @param pattern
-     */
-    virtual void getClusterKeys(RawKeysListCallback callback,
-                                const QString &pattern);
+  typedef QPair<QString, int> Host;
+  typedef QList<Host> HostList;
 
-    /**
-     * @brief flushDbKeys - Remove keys on all master nodes
-     */
-    virtual void flushDbKeys(uint dbIndex, std::function<void(const QString&)> callback);
+  /**
+   * @brief getMasterNodes - Get master nodes of cluster
+   * @return HostList
+   */
+  HostList getMasterNodes();
 
-    typedef QPair<QString, int> Host;
-    typedef QList<Host> HostList;
+  /*
+   * Command execution API
+   */
+  /**
+   * @brief command
+   * @param cmd
+   */
+  void command(const Command &cmd);
 
-    /**
-     * @brief getMasterNodes - Get master nodes of cluster
-     * @return HostList
-     */
-    HostList getMasterNodes();
+  /**
+   * @brief Execute command without callback in async mode.
+   * @param rawCmd
+   * @param db
+   */
+  void command(QList<QByteArray> rawCmd, int db = -1);
 
-    /*
-     * Command execution API
-     */
-    /**
-     * @brief command
-     * @param cmd
-     */
-    void command(const Command& cmd);
+  /**
+   * @brief Execute command with callback in async mode.
+   * @param rawCmd
+   * @param owner
+   * @param callback
+   * @param db
+   */
+  void command(QList<QByteArray> rawCmd, QObject *owner,
+               RedisClient::Command::Callback callback, int db = -1);
 
-    /**
-     * @brief Execute command without callback in async mode.
-     * @param rawCmd
-     * @param db
-     */
-    void command(QList<QByteArray> rawCmd, int db = -1);
+  /**
+   * @brief commandSync
+   * @param cmd
+   * @return
+   */
+  Response commandSync(const Command &cmd);
 
-    /**
-     * @brief Execute command with callback in async mode.
-     * @param rawCmd
-     * @param owner
-     * @param callback
-     * @param db
-     */
-    void command(QList<QByteArray> rawCmd, QObject *owner,
-                 RedisClient::Command::Callback callback, int db = -1);
+  /**
+   * @brief Execute command without callback and wait for response.
+   * @param rawCmd
+   * @param db
+   * @return
+   */
+  Response commandSync(QList<QByteArray> rawCmd, int db = -1);
 
-    /**
-     * @brief commandSync
-     * @param cmd
-     * @return
-     */
-    Response commandSync(const Command& cmd);
+  /*
+   * Aliases for ^ function
+   */
+  Response commandSync(QString cmd, int db = -1);
+  Response commandSync(QString cmd, QString arg1, int db = -1);
+  Response commandSync(QString cmd, QString arg1, QString arg2, int db = -1);
+  Response commandSync(QString cmd, QString arg1, QString arg2, QString arg3,
+                       int db = -1);
 
-    /**
-     * @brief Execute command without callback and wait for response.
-     * @param rawCmd
-     * @param db
-     * @return
-     */
-    Response commandSync(QList<QByteArray> rawCmd, int db = -1);    
+  /**
+   * @brief CollectionCallback
+   */
+  typedef std::function<void(QVariant, QString err)> CollectionCallback;
 
-    /*
-     * Aliases for ^ function
-     */
-    Response commandSync(QString cmd, int db = -1);
-    Response commandSync(QString cmd, QString arg1, int db = -1);
-    Response commandSync(QString cmd, QString arg1, QString arg2, int db = -1);
-    Response commandSync(QString cmd, QString arg1, QString arg2, QString arg3, int db = -1);
+  /**
+   * @brief IncrementalCollectionCallback
+   */
+  typedef std::function<void(QVariant, QString err, bool final)>
+      IncrementalCollectionCallback;
 
-    /**
-     * @brief CollectionCallback
-     */
-    typedef std::function<void(QVariant, QString err)>  CollectionCallback;
+  /**
+   * @brief retrieveCollection
+   * @param cmd
+   * @param callback
+   */
+  virtual void retrieveCollection(const ScanCommand &cmd,
+                                  CollectionCallback callback);
 
-    /**
-     * @brief IncrementalCollectionCallback
-     */
-    typedef std::function<void(QVariant, QString err, bool final)>  IncrementalCollectionCallback;
+  /**
+   * @brief retrieveCollection
+   * @param cmd
+   * @param callback
+   */
+  virtual void retrieveCollectionIncrementally(
+      const ScanCommand &cmd, IncrementalCollectionCallback callback);
 
-    /**
-     * @brief retrieveCollection
-     * @param cmd
-     * @param callback
-     */
-    virtual void retrieveCollection(const ScanCommand& cmd, CollectionCallback callback);
+  /**
+   * @brief runCommand - Low level commands execution API
+   * @param cmd
+   */
+  virtual void runCommand(const Command &cmd);
 
-    /**
-     * @brief retrieveCollection
-     * @param cmd
-     * @param callback
-     */
-    virtual void retrieveCollectionIncrementally(const ScanCommand &cmd, IncrementalCollectionCallback callback);
+  /**
+   * @brief waitForIdle - Wait until all commands in queue will be processed
+   * @param timeout - in milliseconds
+   */
+  bool waitForIdle(uint timeout);
 
-    /**
-     * @brief runCommand - Low level commands execution API
-     * @param cmd
-     */
-    virtual void runCommand(const Command &cmd);
+  /**
+   * @brief create new connection object with same settings
+   * @return
+   */
+  QSharedPointer<Connection> clone() const;
 
+  /*
+   * Low level functions for modification
+   * commands execution.
+   */
+  void setTransporter(QSharedPointer<AbstractTransporter>);
+  QSharedPointer<AbstractTransporter> getTransporter() const;
 
-    /**
-     * @brief waitForIdle - Wait until all commands in queue will be processed
-     * @param timeout - in milliseconds
-     */
-    bool waitForIdle(uint timeout);
+ signals:
+  void addCommandToWorker(const Command &);
+  void error(const QString &);
+  void log(const QString &);
+  void connected();
+  void shutdownStart();
+  void disconnected();
+  void authOk();
+  void authError(const QString &);
 
-    /*
-     * Low level functions for modification
-     * commands execution.
-     */
-    void setTransporter(QSharedPointer<AbstractTransporter>);
-    QSharedPointer<AbstractTransporter> getTransporter() const;
+  // Cluster & Sentinel
+  void reconnectTo(const QString &host, int port);
 
-signals:    
-    void addCommandToWorker(const Command&);
-    void error(const QString&);
-    void log(const QString&);
-    void connected();
-    void shutdownStart();
-    void disconnected();
-    void authOk();
-    void authError(const QString&);
+ protected:
+  void createTransporter();
+  bool isTransporterRunning();
 
-    // Cluster & Sentinel
-    void reconnectTo(const QString& host, int port);
+  Response internalCommandSync(QList<QByteArray> rawCmd);
 
-protected:
-    void createTransporter();
-    bool isTransporterRunning();
+  void processScanCommand(
+      const ScanCommand &cmd, CollectionCallback callback,
+      QSharedPointer<QVariantList> result = QSharedPointer<QVariantList>(),
+      bool incrementalProcessing = false);
 
-    Response internalCommandSync(QList<QByteArray> rawCmd);
+  void changeCurrentDbNumber(int db);
 
-    void processScanCommand(const ScanCommand &cmd,
-                            CollectionCallback callback,
-                            QSharedPointer<QVariantList> result=QSharedPointer<QVariantList>(),
-                            bool incrementalProcessing=false);
+  bool clusterConnectToNextMasterNode();
 
-    void changeCurrentDbNumber(int db);    
+  bool hasNotVisitedClusterNodes() const;
 
-    bool clusterConnectToNextMasterNode();
+ protected slots:
+  void auth();
 
-    bool hasNotVisitedClusterNodes() const;
+ protected:
+  ConnectionConfig m_config;
+  QSharedPointer<QThread> m_transporterThread;
+  QSharedPointer<AbstractTransporter> m_transporter;
 
-protected slots:
-    void auth();
-
-protected:
-    ConnectionConfig m_config;   
-    QSharedPointer<QThread> m_transporterThread;
-    QSharedPointer<AbstractTransporter> m_transporter;
-
-    int m_dbNumber;
-    ServerInfo m_serverInfo;
-    Mode m_currentMode;
-    QMutex m_dbNumberMutex;
-    bool m_autoConnect;    
-    bool m_stoppingTransporter;
-    RawKeysListCallback m_wrapper;
-    RedisClient::Command::Callback m_cmdCallback;
-    QSharedPointer<HostList> m_notVisitedMasterNodes;
-
+  int m_dbNumber;
+  ServerInfo m_serverInfo;
+  Mode m_currentMode;
+  QMutex m_dbNumberMutex;
+  bool m_autoConnect;
+  bool m_stoppingTransporter;
+  RawKeysListCallback m_wrapper;
+  RedisClient::Command::Callback m_cmdCallback;
+  QSharedPointer<HostList> m_notVisitedMasterNodes;
 };
-}
+}  // namespace RedisClient

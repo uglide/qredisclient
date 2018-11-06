@@ -89,6 +89,7 @@ void RedisClient::Connection::disconnect() {
     m_transporterThread->quit();
     m_transporterThread->wait();
     m_transporter.clear();
+    m_transporterThread.clear();
     m_stoppingTransporter = false;
   }
   m_dbNumber = 0;
@@ -219,6 +220,11 @@ bool RedisClient::Connection::waitForIdle(uint timeout) {
   waiter.addSuccessSignal(m_transporter.data(),
                           &AbstractTransporter::queueIsEmpty);
   return waiter.wait();
+}
+
+QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone() const {
+  return QSharedPointer<RedisClient::Connection>(
+      new RedisClient::Connection(getConfig()));
 }
 
 void RedisClient::Connection::retrieveCollection(
