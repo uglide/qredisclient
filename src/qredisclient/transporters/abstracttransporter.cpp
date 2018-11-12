@@ -115,8 +115,10 @@ void RedisClient::AbstractTransporter::sendResponse(const RedisClient::Response&
     }
 
     if (runningCommand->cmd.isUnSubscriptionCommand()) {
-        // TODO: remove channels from m_subscriptions
-        // TODO: send error to callbacks
+        QList<QByteArray> channels = runningCommand->cmd.getSplitedRepresentattion().mid(1);
+        for (QByteArray channel : channels) {
+            m_subscriptions.remove(channel);
+        }
     }
 
     if (runningCommand->cmd.isSelectCommand() && response.isOkMessage()) {
