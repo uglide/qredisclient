@@ -3,15 +3,22 @@ image: Visual Studio 2017
 init:
 - cmd: >-
     set PATH=%QTDIR%\bin;%PATH%
+
     call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 environment:
   QTDIR: C:\Qt\5.9.7\msvc2017_64
 build_script:
 - cmd: >-
     git submodule update --init --recursive
+
     cd 3rdparty\hiredis
+
     git apply ..\hiredis-win.patch
+
     cd ..\..
-    qmake
-    nmake
+
+    qmake CONFIG+=release DESTDIR=%cd%/build
+
+    nmake /S /NOLOGO
+
 
