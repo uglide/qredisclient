@@ -6,7 +6,7 @@ init:
 
     call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvars64.bat"
 environment:
-  QTDIR: C:\Qt\5.9.7\msvc2017_64
+  QTDIR: C:\Qt\5.9\msvc2017_64
 build_script:
 - cmd: >-
     git submodule update --init --recursive
@@ -17,8 +17,9 @@ build_script:
 
     cd ..\..
 
+    qmake -v
+
     qmake CONFIG+=release DESTDIR=%cd%/build
 
     nmake /S /NOLOGO
-
 
