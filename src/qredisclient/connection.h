@@ -279,7 +279,7 @@ class Connection : public QObject {
    * @brief create new connection object with same settings
    * @return
    */
-  QSharedPointer<Connection> clone() const;
+  virtual QSharedPointer<Connection> clone() const;
 
   /*
    * Low level functions for modification
