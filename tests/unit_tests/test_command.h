@@ -17,5 +17,7 @@ private slots:
     void scanCommandSetCursor_data();
     void scanCommandIsValid();
     void scanCommandIsValid_data();
+
+    void pipelineCommand();
 };
 

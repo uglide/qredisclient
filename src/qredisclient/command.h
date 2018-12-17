@@ -55,7 +55,7 @@ public:
     Command &append(const QByteArray& part);
 
     /**
-     * @brief Get command in RESP format
+     * @brief Get command in RESP or Pipeline format
      * @return QByteArray
      */
     QByteArray  getByteRepresentation() const;
@@ -129,6 +129,12 @@ public:
     bool isHiPriorityCommand() const;
 
     /**
+     * @brief Enable/disable pipeline mode. Default is off.
+     * @param enable
+     */
+    void setPipelineCommand(const bool enable);
+
+    /**
      * @brief isValid
      * @return
      */
@@ -143,6 +149,20 @@ public:
     bool isSubscriptionCommand() const;
     bool isUnSubscriptionCommand() const;
     bool isAuthCommand() const;
+    bool isPipeline() const;
+
+protected:
+    /**
+     * @brief Serialize command to RESP format
+     * @return
+     */
+    QByteArray serializeToRESP() const;
+
+    /**
+     * @brief Serialize command to Pipeline format
+     * @return
+     */
+    QByteArray serializeToPipeline() const;
 
 public:
     /**
@@ -157,6 +177,7 @@ protected:
     QList<QByteArray> m_commandWithArguments;
     int m_dbIndex;
     bool m_hiPriorityCommand;
+    bool m_isPipeline;
     Callback m_callback;
 };
 }

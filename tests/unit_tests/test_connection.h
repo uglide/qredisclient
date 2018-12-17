@@ -48,6 +48,11 @@ private slots:
     void subscribeAndUnsubscribe();
 
     /*
+     * Pipeline tests
+    */
+    void runPipelineCommandSync();
+
+    /*
      * Stability tests
      */
     void checkQueueProcessing();
