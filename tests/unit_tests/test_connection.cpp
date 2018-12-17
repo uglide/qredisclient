@@ -92,6 +92,21 @@ void TestConnection::runEmptyCommand()
     QCOMPARE(hasException, true);
 }
 
+void TestConnection::runPipelineCommandSync()
+{
+    Connection connection(config);
+    QVERIFY(connection.connect());
+
+    RedisClient::Command cmd({"SET pipelines rock"});
+    cmd.append("HSET MyHash Key1 1234");
+    cmd.append("HSET MyHash Key2 ABCDEFGH");
+    cmd.append("PING");
+    cmd.setPipelineCommand(true);
+    RedisClient::Response response = connection.commandSync(cmd);
+    QCOMPARE(response.isValid(), true);
+    QCOMPARE(response.toRawString().toUtf8(), QByteArray("+OK\r\n:1\r\n:1\r\n+PONG\r\n"));
+}
+
 void TestConnection::autoConnect()
 {
     //given
