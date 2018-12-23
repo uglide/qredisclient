@@ -51,6 +51,8 @@ private slots:
      * Pipeline tests
     */
     void runPipelineCommandSync();
+    void runPipelineCommandAsync();
+    void benchmarkPipeline();
 
     /*
      * Stability tests

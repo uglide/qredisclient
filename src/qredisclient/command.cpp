@@ -227,7 +227,7 @@ QByteArray RedisClient::Command::serializeToRESP() const
 QByteArray RedisClient::Command::serializeToPipeline() const
 {
     char separator[] = "\r\n";
-    QByteArray result;
+    QByteArray result("MULTI\r\n");
     for (QByteArray partArray : m_commandWithArguments)
         result.append(partArray).append(separator, 2);
     return result;
