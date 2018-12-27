@@ -55,6 +55,12 @@ public:
     Command &append(const QByteArray& part);
 
     /**
+     * @brief length
+     * @return Number of command arguments
+     */
+    int length() const;
+
+    /**
      * @brief Get command in RESP or Pipeline format
      * @return QByteArray
      */
@@ -149,7 +155,7 @@ public:
     bool isSubscriptionCommand() const;
     bool isUnSubscriptionCommand() const;
     bool isAuthCommand() const;
-    bool isPipeline() const;
+    bool isPipelineCommand() const;
 
 protected:
     /**
