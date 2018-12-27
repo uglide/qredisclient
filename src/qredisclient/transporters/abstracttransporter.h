@@ -34,7 +34,7 @@ class AbstractTransporter : public QObject {
 
  public slots:
   virtual void init();
-  virtual void disconnectFromHost() {}
+  virtual void disconnectFromHost();
   virtual void addCommand(const Command&);
   virtual void cancelCommands(QObject*);
   virtual void readyRead();
