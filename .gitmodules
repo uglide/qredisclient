@@ -1,3 +1,6 @@
 [submodule "3rdparty/hiredis"]
 	path = 3rdparty/hiredis
 	url = https://github.com/redis/hiredis.git
+[submodule "3rdparty/asyncfuture"]
+	path = 3rdparty/asyncfuture
+	url = https://github.com/benlau/asyncfuture.git

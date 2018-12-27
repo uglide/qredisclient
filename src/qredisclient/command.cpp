@@ -23,14 +23,11 @@ RedisClient::Command::Command(const QList<QByteArray> &cmd, QObject *context,
 {
 }
 
-RedisClient::Command::~Command()
-{
-}
+RedisClient::Command::~Command() {}
 
-RedisClient::Command &RedisClient::Command::append(const QByteArray &part)
-{
-    m_commandWithArguments.append(part);
-    return *this;
+RedisClient::Command &RedisClient::Command::append(const QByteArray &part) {
+  m_commandWithArguments.append(part);
+  return *this;
 }
 
 int RedisClient::Command::length() const
@@ -48,104 +45,84 @@ QList<QByteArray> RedisClient::Command::splitCommandString(const QString &rawCom
     delimiters << QChar('"') << QChar('\'');
     QChar currentDelimiter = '\0';
 
-    QByteArray command = printableStringToBinary(rawCommand);
+  QByteArray command = printableStringToBinary(rawCommand);
 
-    while (i < command.length())
-    {
-        if(QChar(command.at(i)).isSpace() && !inQuote)
-        {
-            if (part.length() > 0)
-                parts.append(part);
-            part = QByteArray();
-        }
-        else if (delimiters.contains(command.at(i))
-                 && (!inQuote || currentDelimiter == command.at(i)))
-        {
-            if (i > 0 && command.at(i-1) == '\\') {
-                part.remove(part.size()-1, 1);
-                part.append(command.at(i++));
-                continue;
-            }
+  while (i < command.length()) {
+    if (QChar(command.at(i)).isSpace() && !inQuote) {
+      if (part.length() > 0) parts.append(part);
+      part = QByteArray();
+    } else if (delimiters.contains(command.at(i)) &&
+               (!inQuote || currentDelimiter == command.at(i))) {
+      if (i > 0 && command.at(i - 1) == '\\') {
+        part.remove(part.size() - 1, 1);
+        part.append(command.at(i++));
+        continue;
+      }
 
-            if (inQuote) {
-                parts.append(part);
-                currentDelimiter = '\0';
-            } else {
-                currentDelimiter = command.at(i);
-            }
-
-            part = QByteArray();
-            inQuote = !inQuote;
-        }
-        else
-        {
-            part.append(command.at(i));
-        }
-        ++i;
-    }
-    if (parts.length() < 1 || part.length() > 0)
+      if (inQuote) {
         parts.append(part);
-    return parts;
+        currentDelimiter = '\0';
+      } else {
+        currentDelimiter = command.at(i);
+      }
+
+      part = QByteArray();
+      inQuote = !inQuote;
+    } else {
+      part.append(command.at(i));
+    }
+    ++i;
+  }
+  if (parts.length() < 1 || part.length() > 0) parts.append(part);
+  return parts;
 }
 
-bool RedisClient::Command::hasCallback() const
-{
-    return (bool)m_callback;
+bool RedisClient::Command::hasCallback() const { return (bool)m_callback; }
+
+AsyncFuture::Deferred<RedisClient::Response> RedisClient::Command::getDeferred()
+    const {
+  return m_deferred;
 }
 
-void RedisClient::Command::setCallBack(QObject *context, Callback callback)
-{
-    m_owner = context;
-    m_callback = callback;
+void RedisClient::Command::setCallBack(QObject *context, Callback callback) {
+  m_owner = context;
+  m_callback = callback;
 }
 
-RedisClient::Command::Callback RedisClient::Command::getCallBack() const
-{
-    return m_callback;
+RedisClient::Command::Callback RedisClient::Command::getCallBack() const {
+  return m_callback;
 }
 
-bool RedisClient::Command::hasDbIndex() const
-{
-    return m_dbIndex >= 0;
+bool RedisClient::Command::hasDbIndex() const { return m_dbIndex >= 0; }
+
+bool RedisClient::Command::isSelectCommand() const {
+  if (m_commandWithArguments.length() < 2) return false;
+
+  return m_commandWithArguments.at(0).toLower() == "select";
 }
 
-bool RedisClient::Command::isSelectCommand() const
-{
-    if (m_commandWithArguments.length() < 2)
-        return false;
+bool RedisClient::Command::isSubscriptionCommand() const {
+  if (m_commandWithArguments.length() < 2) return false;
 
-    return m_commandWithArguments.at(0).toLower() == "select";
+  return m_commandWithArguments.at(0).toLower() == "subscribe" ||
+         m_commandWithArguments.at(0).toLower() == "psubscribe";
 }
 
-bool RedisClient::Command::isSubscriptionCommand() const
-{
-    if (m_commandWithArguments.length() < 2)
-        return false;
+bool RedisClient::Command::isUnSubscriptionCommand() const {
+  if (m_commandWithArguments.length() < 2) return false;
 
-    return m_commandWithArguments.at(0).toLower() == "subscribe"
-            || m_commandWithArguments.at(0).toLower() == "psubscribe";
+  return m_commandWithArguments.at(0).toLower() == "unsubscribe" ||
+         m_commandWithArguments.at(0).toLower() == "punsubscribe";
 }
 
-bool RedisClient::Command::isUnSubscriptionCommand() const
-{
-    if (m_commandWithArguments.length() < 2)
-        return false;
+bool RedisClient::Command::isAuthCommand() const {
+  if (m_commandWithArguments.length() < 2) return false;
 
-    return m_commandWithArguments.at(0).toLower() == "unsubscribe"
-            || m_commandWithArguments.at(0).toLower() == "punsubscribe";
+  return m_commandWithArguments.at(0).toLower() == "auth";
 }
 
-bool RedisClient::Command::isAuthCommand() const
-{
-    if (m_commandWithArguments.length() < 2)
-        return false;
-
-    return m_commandWithArguments.at(0).toLower() == "auth";
-}
-
-bool RedisClient::Command::isHiPriorityCommand() const
-{
-    return m_hiPriorityCommand;
+bool RedisClient::Command::isHiPriorityCommand() const {
+  return m_hiPriorityCommand;
 }
 
 bool RedisClient::Command::isPipelineCommand() const
@@ -163,36 +140,27 @@ int RedisClient::Command::getDbIndex() const
     return m_dbIndex;
 }
 
-QObject *RedisClient::Command::getOwner() const
-{
-    return m_owner;
+QObject *RedisClient::Command::getOwner() const { return m_owner; }
+
+QByteArray RedisClient::Command::getRawString(int limit) const {
+  if (isAuthCommand()) return QByteArray("AUTH *******");
+
+  return (limit > 0) ? m_commandWithArguments.join(' ').left(limit)
+                     : m_commandWithArguments.join(' ');
 }
 
-QByteArray RedisClient::Command::getRawString(int limit) const
-{
-    if (isAuthCommand())
-        return QByteArray("AUTH *******");
-
-    return (limit > 0)? m_commandWithArguments.join(' ').left(limit)
-                  : m_commandWithArguments.join(' ');
+QList<QByteArray> RedisClient::Command::getSplitedRepresentattion() const {
+  return m_commandWithArguments;
 }
 
-QList<QByteArray> RedisClient::Command::getSplitedRepresentattion() const
-{
-    return m_commandWithArguments;
+QString RedisClient::Command::getPartAsString(int i) const {
+  if (m_commandWithArguments.size() <= i) return QString();
+
+  return QString::fromUtf8(m_commandWithArguments.at(i));
 }
 
-QString RedisClient::Command::getPartAsString(int i) const
-{
-    if (m_commandWithArguments.size() <= i)
-        return QString();
-
-    return QString::fromUtf8(m_commandWithArguments.at(i));
-}
-
-bool RedisClient::Command::isEmpty() const
-{
-    return m_commandWithArguments.isEmpty();
+bool RedisClient::Command::isEmpty() const {
+  return m_commandWithArguments.isEmpty();
 }
 
 QByteArray RedisClient::Command::getByteRepresentation() const
@@ -218,15 +186,15 @@ QByteArray RedisClient::Command::serializeToRESP() const
     QByteArray result;
     result.append(QString("*%1\r\n").arg(m_commandWithArguments.length()));
 
-    for (QByteArray partArray : m_commandWithArguments) {
-        result.append("$");
-        result.append(QString::number(partArray.size()));
-        result.append("\r\n");
-        result.append(partArray);
-        result.append("\r\n");
-    }
+  for (QByteArray partArray : m_commandWithArguments) {
+    result.append("$");
+    result.append(QString::number(partArray.size()));
+    result.append("\r\n");
+    result.append(partArray);
+    result.append("\r\n");
+  }
 
-    return result;
+  return result;
 }
 
 QByteArray RedisClient::Command::serializeToPipeline() const

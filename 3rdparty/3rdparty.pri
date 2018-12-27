@@ -6,3 +6,7 @@ HEADERS += $$PWD/hiredis/read.h \
            $$PWD/hiredis/sds.h
 SOURCES += $$PWD/hiredis/read.c \
            $$PWD/hiredis/sds.c
+
+
+# Asyncfuture
+include($$PWD/asyncfuture/asyncfuture.pri)

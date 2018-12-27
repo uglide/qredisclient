@@ -40,9 +40,9 @@ void RedisClient::DefaultTransporter::initSocket() {
 void RedisClient::DefaultTransporter::disconnectFromHost() {
   QMutexLocker lock(&m_disconnectLock);
 
-  if (m_socket.isNull()) return;
+  RedisClient::AbstractTransporter::disconnectFromHost();
 
-  m_loopTimer->stop();
+  if (m_socket.isNull()) return;
 
   m_socket->abort();
   m_socket.clear();
