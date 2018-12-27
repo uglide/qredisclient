@@ -15,10 +15,10 @@ class DefaultTransporter : public AbstractTransporter {
   Q_OBJECT
  public:
   DefaultTransporter(Connection* c);
-  ~DefaultTransporter();
+  ~DefaultTransporter() override;
 
  public slots:
-  void disconnectFromHost();
+  void disconnectFromHost() override;
 
  protected:
   bool isInitialized() const override;
@@ -36,7 +36,7 @@ class DefaultTransporter : public AbstractTransporter {
   void error(QAbstractSocket::SocketError error);
   void sslError(const QList<QSslError>& errors);
 
- private:
+ protected:
   QSharedPointer<QSslSocket> m_socket;
   QMutex m_disconnectLock;
   bool m_errorOccurred;

@@ -10,6 +10,9 @@ class TestConnection : public BaseTestCase
 {
     Q_OBJECT
 
+signals:
+    void callbackReceived();
+
 private slots:
     void init();
 
@@ -53,6 +56,7 @@ private slots:
     void runPipelineCommandSync();
     void runPipelineCommandAsync();
     void benchmarkPipeline();
+    void benchmarkPipelineAsync();
 
     /*
      * Stability tests
