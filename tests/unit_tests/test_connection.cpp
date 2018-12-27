@@ -94,7 +94,7 @@ void TestConnection::runEmptyCommand()
 
 void TestConnection::runPipelineCommandSync()
 {
-    Connection connection(config);
+    Connection connection(config, true, true);
     QVERIFY(connection.connect());
 
     RedisClient::Command cmd({"SET pipelines rock"});
@@ -102,14 +102,16 @@ void TestConnection::runPipelineCommandSync()
     cmd.append("HSET MyHash Key2 ABCDEFGH");
     cmd.setPipelineCommand(true);
     RedisClient::Response response = connection.commandSync(cmd);
-    RedisClient::Response exec = connection.commandSync("EXEC");
-    QCOMPARE(response.isValid(), true);
-    QCOMPARE(exec.toRawString().toUtf8(), QByteArray("*3\r\n+OK\r\n:1\r\n:1\r\n"));
+
+    QCOMPARE(response.isArray(), true);
+    QCOMPARE(response.getValue().toList().length(), 3);
+    QCOMPARE(response.toRawString(0).toUtf8(),
+             QByteArray("*3\r\n+OK\r\n:1\r\n:1\r\n"));
 }
 
 void TestConnection::runPipelineCommandAsync()
 {
-    Connection connection(config);
+    Connection connection(config, true, true);
     QVERIFY(connection.connect());
 
     RedisClient::Command cmd({"SET pipelines async"});
@@ -118,53 +120,90 @@ void TestConnection::runPipelineCommandAsync()
     cmd.setPipelineCommand(true);
 
     // Setup callback
-    bool isValid = false;
-    bool receivedCallback = false;
-    QString responseRawString;
-    QString execRawString;
+    RedisClient::Response response;
     QObject * owner = new QObject();
-    cmd.setCallBack(owner, [&connection, &isValid, &responseRawString, &receivedCallback, &execRawString]
-                    (RedisClient::Response response, QString){
-        isValid = response.isValid();
-        responseRawString = response.toRawString();
-        receivedCallback = true;
-
-        // Issue "exec" as last part of callback
-        execRawString = connection.commandSync("EXEC").toRawString();
+    QEventLoop eventLoop;
+    connect(this, SIGNAL(callbackReceived()), &eventLoop, SLOT(quit()));
+    cmd.setCallBack(owner, [this, &response]
+                    (RedisClient::Response resp, QString){
+        response = resp;
+        emit this->callbackReceived();
     });
 
     connection.command(cmd);
-    QCOMPARE(receivedCallback, false);
-    wait(2000);  // Wait for callback
-    QCOMPARE(receivedCallback, true);
-    QCOMPARE(isValid, true);
-    QCOMPARE(responseRawString.toUtf8(), QByteArray("+OK\r\n+QUEUED\r\n+QUEUED\r\n+QUEUED\r\n"));
-    QCOMPARE(execRawString.toUtf8(), QByteArray("*3\r\n+OK\r\n:1\r\n:1\r\n"));
+    eventLoop.exec();  // Wait for callback to complete
+
+    QCOMPARE(response.isArray(), true);
+    QCOMPARE(response.getValue().toList().length(), 3);
+    QCOMPARE(response.toRawString(0).toUtf8(),
+             QByteArray("*3\r\n+OK\r\n:1\r\n:1\r\n"));
 }
 
 void TestConnection::benchmarkPipeline()
 {
-    Connection connection(config);
+    Connection connection(config, true, true);
     QVERIFY(connection.connect());
     connection.commandSync("flushdb");
 
     RedisClient::Command cmd;
     cmd.setPipelineCommand(true);
-    int N = 50000;
-    for (int k=0; k<N; k++)
+    int N = 10000;
+    for (int k=1; k<=N; k++)
         cmd.append(QString("hset h k%1 %1").arg(k).toUtf8());
 
     // Measure the time it takes to complete the transaction:
-    //   1: MULTI
-    //   2: Flush the full pipeline cmd
-    //   3: EXEC
     QTime t0;
     t0.start();
     RedisClient::Response response = connection.commandSync(cmd);
-    RedisClient::Response execResponse = connection.commandSync("EXEC");
     int tf = t0.elapsed();
+    QWARN(QString("Benchmark %1 HSET: %2 ms").arg(N).arg(tf).toUtf8());
 
-    QWARN(QString("Time to complete %1 ops: %2 ms").arg(N).arg(tf).toUtf8());
+    QCOMPARE(response.isArray(), true);
+    QCOMPARE(response.getValue().toList().length(), N);
+
+    // Read back the N'th value
+    RedisClient::Response valResponse = connection.commandSync("hget", "h", QString("k%1").arg(N));
+    QCOMPARE(valResponse.getValue(), QVariant(N));
+}
+
+void TestConnection::benchmarkPipelineAsync()
+{
+    Connection connection(config, true, true);
+    QVERIFY(connection.connect());
+    connection.commandSync("flushdb");
+
+    RedisClient::Command cmd;
+    cmd.setPipelineCommand(true);
+    int N = 10000;
+    for (int k=1; k<=N; k++)
+        cmd.append(QString("hset ha k%1 %1").arg(k).toUtf8());
+
+    // Setup callback
+    int tf;
+    QTime t0;
+    RedisClient::Response response;
+    QObject * owner = new QObject();
+    QEventLoop eventLoop;
+    connect(this, SIGNAL(callbackReceived()), &eventLoop, SLOT(quit()));
+    cmd.setCallBack(owner, [this, &response, &t0, &tf]
+                    (RedisClient::Response _response, QString){
+        tf = t0.elapsed();
+        response = _response;
+        emit this->callbackReceived();
+    });
+
+    // Wait for callback:
+    t0.start();
+    connection.command(cmd);
+    eventLoop.exec();
+    QWARN(QString("Benchmark %1 HSET: %2 ms").arg(N).arg(tf).toUtf8());
+
+    QCOMPARE(response.isArray(), true);
+    QCOMPARE(response.getValue().toList().length(), N);
+
+    // Read back the N'th value
+    RedisClient::Response valResponse = connection.commandSync("hget", "ha", QString("k%1").arg(N));
+    QCOMPARE(valResponse.getValue(), QVariant(N));
 }
 
 void TestConnection::autoConnect()

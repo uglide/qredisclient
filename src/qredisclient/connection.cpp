@@ -9,6 +9,7 @@
 #include "scancommand.h"
 #include "scanresponse.h"
 #include "transporters/defaulttransporter.h"
+#include "transporters/pipelinetransporter.h"
 #include "utils/compat.h"
 #include "utils/sync.h"
 
@@ -20,11 +21,12 @@ inline void initResources() { Q_INIT_RESOURCE(lua); }
 
 const QString END_OF_COLLECTION = "end_of_collection";
 
-RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect)
+RedisClient::Connection::Connection(const ConnectionConfig &c, bool autoConnect, bool usePipeline)
     : m_config(c),
       m_dbNumber(0),
       m_currentMode(Mode::Normal),
       m_autoConnect(autoConnect),
+      m_pipeline(usePipeline),
       m_stoppingTransporter(false) {
   initResources();
 }
@@ -448,8 +450,12 @@ void RedisClient::Connection::createTransporter() {
     throw Exception("QRedisClient compiled without ssh support.");
 #endif
   } else {
-    m_transporter =
-        QSharedPointer<AbstractTransporter>(new DefaultTransporter(this));
+      if (m_pipeline)
+        m_transporter =
+          QSharedPointer<AbstractTransporter>(new PipelineTransporter(this));
+      else
+        m_transporter =
+          QSharedPointer<AbstractTransporter>(new DefaultTransporter(this));
   }
 }
 
