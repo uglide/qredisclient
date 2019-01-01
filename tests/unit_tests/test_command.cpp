@@ -119,5 +119,5 @@ void TestCommand::pipelineCommand()
     QCOMPARE(cmd.isUnSubscriptionCommand(), false);
 
     QByteArray actualResult = cmd.getByteRepresentation();
-    QCOMPARE(actualResult, QByteArray("PING\r\nPING\r\nPING\r\n"));
+    QCOMPARE(actualResult, QByteArray("MULTI\r\nPING\r\nPING\r\nPING\r\nEXEC\r\n"));
 }
