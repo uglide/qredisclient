@@ -6,67 +6,65 @@
 #include "basetestcase.h"
 #include "qredisclient/connectionconfig.h"
 
-class TestConnection : public BaseTestCase
-{
-    Q_OBJECT
+class TestConnection : public BaseTestCase {
+  Q_OBJECT
 
-signals:
-    void callbackReceived();
+ signals:
+  void callbackReceived();
 
-private slots:
-    void init();
+ private slots:
+  void init();
 
-    /*
-     * Dummy transporter test
-     */
-    void testWithDummyTransporter();
+  /*
+   * Dummy transporter test
+   */
+  void testWithDummyTransporter();
 
-    void testParseServerInfo();
-    void testConfig();
-    void connectWithInvalidConfig();
+  void testParseServerInfo();
+  void testConfig();
+  void connectWithInvalidConfig();
 
 #ifdef INTEGRATION_TESTS
 
-    /*
-     * connect() & disconnect() tests
-     */
-    void connectAndDisconnect();
-    void connectToHostAndRunCommand();
-    void connectWithAuth();
-    void connectWithInvalidAuth();    
+  /*
+   * connect() & disconnect() tests
+   */
+  void connectAndDisconnect();
+  void connectToHostAndRunCommand();
+  void connectWithAuth();
+  void connectWithInvalidAuth();
 
-    void testScanCommand();
-    void testRetriveCollection();
+  void testScanCommand();
+  void testRetriveCollection();
 
-    /*
-     * dirty tests for runCommand()
-     */
-    void runEmptyCommand();
-    void autoConnect();
-    void runCommandAndDelete();
+  /*
+   * dirty tests for runCommand()
+   */
+  void runEmptyCommand();
+  void autoConnect();
+  void runCommandAndDelete();
 
-    /*
-     * Pub/Sub tests
-     */
-    void subscribeAndUnsubscribe();
+  /*
+   * Pub/Sub tests
+   */
+  void subscribeAndUnsubscribe();
 
-    /*
-     * Pipeline tests
-    */
-    void runPipelineCommandSync();
-    void runPipelineCommandAsync();
-    void benchmarkPipeline();
-    void benchmarkPipelineAsync();
+  /*
+   * Pipeline tests
+   */
+  void runPipelineCommandSync();
+  void runPipelineCommandAsync();
+  void benchmarkPipeline();
+  void benchmarkPipelineAsync();
 
-    /*
-     * Stability tests
-     */
-    void checkQueueProcessing();
-    void checkTimeout();
+  /*
+   * Stability tests
+   */
+  void checkQueueProcessing();
+  void checkTimeout();
 #endif
-private:
-    RedisClient::ConnectionConfig config;
+ private:
+  RedisClient::ConnectionConfig config;
 };
 
-#endif // TEST_CONNECTION_H
-
+#endif  // TEST_CONNECTION_H

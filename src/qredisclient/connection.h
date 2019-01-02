@@ -63,10 +63,9 @@ class Connection : public QObject {
    * @brief Constructs connection class
    * @param c - connection config
    * @param autoconnect - Auto connect if disconnected
-   * @param usePipeline - Pipeline transporter (intended only for pipeline commands)
    * NOTE: different config options are required for different transporters.
    */
-  Connection(const ConnectionConfig &c, bool autoConnect = true, bool usePipeline = false);
+  Connection(const ConnectionConfig &c, bool autoConnect = true);
 
   /**
    * @brief ~Connection
@@ -333,7 +332,6 @@ class Connection : public QObject {
   Mode m_currentMode;
   QMutex m_dbNumberMutex;
   bool m_autoConnect;
-  bool m_pipeline;
   bool m_stoppingTransporter;
   RawKeysListCallback m_wrapper;
   RedisClient::Command::Callback m_cmdCallback;

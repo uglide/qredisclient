@@ -2,26 +2,26 @@
 
 #include <QObject>
 
-class TestResponse: public QObject
-{
-	Q_OBJECT
+class TestResponse : public QObject {
+  Q_OBJECT
 
-private slots:
-	//parsing tests
-	void getValue();
-	void getValue_data();
+ private slots:
+  // parsing tests
+  void getValue();
+  void getValue_data();
 
-    // basic tests
-    void source();
-    void valueToHumanReadString();
+  // basic tests
+  void source();
+  void valueToHumanReadString();
 
-	//validation tests
-	void isValid();
-	void isValid_data();	
+  // validation tests
+  void isValid();
+  void isValid_data();
 
-    void scanRespGetData();
-    void scanIsValid();
+  void scanRespGetData();
+  void scanIsValid();
 
-    void multipleResponsesInTheBuffer();
+  void multipleResponsesInTheBuffer();
+
+  void hiredisBufferCleanup();
 };
-

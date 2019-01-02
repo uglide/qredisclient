@@ -21,6 +21,7 @@ class Response {
  public:
   Response();
   Response(const QByteArray &);
+  // Response(const Response &);
   virtual ~Response(void);
 
   QVariant getValue();
@@ -33,6 +34,7 @@ class Response {
   bool isErrorStateMessage() const;
   bool isDisabledCommandErrorMessage() const;
   bool isOkMessage() const;
+  bool isQueuedMessage() const;
   bool isValid();
   bool isMessage() const;
   bool isArray() const;
@@ -51,21 +53,28 @@ class Response {
   void setSource(const QByteArray &);
   void appendToSource(const QByteArray &);
   QByteArray getUnusedBuffer();
+  Response getNextResponse();
+  void clearBuffers();
   void reset();
 
   static QString valueToHumanReadString(const QVariant &, int indentLevel = 0);
 
  protected:
+  Response(const QByteArray &, QSharedPointer<QVariant>);
   Type getResponseType(const QByteArray &) const;
   Type getResponseType(const char) const;
 
   bool parse();
+  QSharedPointer<QVariant> getNextReplyFromBuffer();
   void feed(const QByteArray &buffer);
+
+  long getReaderAbsolutePosition();
 
  protected:
   QByteArray m_responseSource;
   QSharedPointer<redisReader> m_redisReader;
   QSharedPointer<QVariant> m_result;
+  long m_endOfValidResponseInBuffer;
 
  private:
   /*
