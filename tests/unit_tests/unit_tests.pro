@@ -13,9 +13,9 @@ INCLUDEPATH += \
     $$SRC_DIR/ \
     $$PWD/
 
-unix:!mac {
-  DEFINES += INTEGRATION_TESTS QT_NO_DEBUG_OUTPUT
-}
+
+DEFINES += INTEGRATION_TESTS
+
 
 isEmpty(DESTDIR) {
     DESTDIR = $$PWD
