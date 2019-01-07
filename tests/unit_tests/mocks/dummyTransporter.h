@@ -3,6 +3,7 @@
 #include <QSharedPointer>
 #include <QTimer>
 #include "qredisclient/command.h"
+#include "qredisclient/response.h"
 #include "qredisclient/transporters/abstracttransporter.h"
 
 class DummyTransporter : public RedisClient::AbstractTransporter {
@@ -23,8 +24,8 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
 
   void setFakeResponses(const QStringList& respList) {
     for (QString response : respList) {
-      RedisClient::Response r(response.toLatin1());
-      fakeResponses.push_back(r);
+      m_parser.feedBuffer(response.toLatin1());
+      fakeResponses.push_back(m_parser.getNextResponse());
     }
   }
 
@@ -47,10 +48,11 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
     initCalls++;
 
     // Init command tested after socket connection
-    RedisClient::Response info("+redis_version:999.999.999\r\n");
+    RedisClient::Response info(RedisClient::Response::Type::String,
+                               "redis_version:999.999.999");
     fakeResponses.push_front(info);
 
-    RedisClient::Response r("+PONG\r\n");
+    RedisClient::Response r(RedisClient::Response::Type::String, "PONG");
     fakeResponses.push_front(r);
 
     m_loopTimer = QSharedPointer<QTimer>(new QTimer);
@@ -67,8 +69,10 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
   virtual void runCommand(const RedisClient::Command& cmd) override {
     executedCommands.push_back(cmd);
 
+    RedisClient::Response resp;
+
     if (fakeResponses.size() > 0) {
-      m_response = fakeResponses.first();
+      resp = fakeResponses.first();
       fakeResponses.removeFirst();
     } else {
       qDebug() << "Unexpected command: " << cmd.getRawString();
@@ -76,13 +80,13 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
       for (auto cmd : executedCommands) {
         qDebug() << "\t" << cmd.getRawString();
       }
-      m_response = RedisClient::Response();
+      resp = RedisClient::Response();
     }
 
     m_runningCommands.enqueue(
         QSharedPointer<RunningCommand>(new RunningCommand(cmd)));
 
-    sendResponse(m_response);
+    sendResponse(resp);
   }
 
   void sendResponse(const RedisClient::Response& response) {

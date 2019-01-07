@@ -2,6 +2,7 @@
 #include <QVariant>
 #include <functional>
 #include "qredisclient/connection.h"
+#include "qredisclient/responseparser.h"
 #include "qredisclient/scancommand.h"
 
 class DummyConnection : public RedisClient::Connection {
@@ -39,9 +40,8 @@ class DummyConnection : public RedisClient::Connection {
     return m_version;
   }
 
-  void retrieveCollection(
-      const RedisClient::ScanCommand&,
-      RedisClient::Connection::CollectionCallback callback) override {
+  void retrieveCollection(const RedisClient::ScanCommand&,
+                          Connection::CollectionCallback callback) override {
     QVariant resp;
 
     if (fakeScanCollections.size()) {
@@ -84,16 +84,18 @@ class DummyConnection : public RedisClient::Connection {
   QList<RedisClient::Response> fakeResponses;
 
   void setFakeResponses(const QStringList& respList) {
-    for (QString response : respList) {
-      RedisClient::Response r(response.toLatin1());
-      fakeResponses.push_back(r);
-    }
+    RedisClient::ResponseParser p;
 
-    if (fakeResponses.size() > 0 &&
-        fakeResponses.first().toRawString().contains("# Keyspace")) {
-      m_serverInfo = RedisClient::ServerInfo::fromString(
-          fakeResponses.first().getValue().toString());
-      fakeResponses.removeFirst();
+    for (QString response : respList) {
+      p.feedBuffer(response.toLatin1());
+
+      if (response.contains("# Keyspace") && respList.size() > 0) {
+        m_serverInfo = RedisClient::ServerInfo::fromString(
+            p.getNextResponse().value().toString());
+        continue;
+      }
+
+      fakeResponses.push_back(p.getNextResponse());
     }
   }
 

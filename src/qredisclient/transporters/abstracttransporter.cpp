@@ -1,6 +1,7 @@
 #include "abstracttransporter.h"
 #include <QDebug>
 #include "qredisclient/connection.h"
+#include "qredisclient/private/responseemmiter.h"
 #include "qredisclient/utils/text.h"
 
 RedisClient::AbstractTransporter::AbstractTransporter(
@@ -99,7 +100,7 @@ void RedisClient::AbstractTransporter::sendResponse(
 
     if (response.isErrorStateMessage()) {
       m_reconnectEnabled = false;
-      emit errorOccurred(response.toRawString());
+      emit errorOccurred(response.value().toByteArray());
     }
     return;
   }
@@ -217,12 +218,12 @@ void RedisClient::AbstractTransporter::logResponse(
     const RedisClient::Response &response) {
   QString result;
 
-  if (response.getType() == RedisClient::Response::Type::Status ||
-      response.getType() == RedisClient::Response::Type::Error) {
-    result = response.toRawString();
-  } else if (response.getType() == RedisClient::Response::Type::Bulk) {
+  if (response.type() == RedisClient::Response::Type::Status ||
+      response.type() == RedisClient::Response::Type::Error) {
+    result = response.value().toByteArray();
+  } else if (response.type() == RedisClient::Response::Type::String) {
     result = QString("Bulk");
-  } else if (response.getType() == RedisClient::Response::Type::MultiBulk) {
+  } else if (response.type() == RedisClient::Response::Type::Array) {
     result = QString("Array");
   }
 
@@ -291,24 +292,19 @@ void RedisClient::AbstractTransporter::executionTimeout() {
 void RedisClient::AbstractTransporter::readyRead() {
   if (!canReadFromSocket()) return;
 
-  m_response.appendToSource(readFromSocket());
-
-  if (!m_response.isValid()) {
+  if (!m_parser.feedBuffer(readFromSocket())) {
+    // TODO: reset???!
     return;
   }
 
   QList<RedisClient::Response> responses;
-  responses.append(m_response);
-
   RedisClient::Response resp;
 
   do {
-    resp = m_response.getNextResponse();
+    resp = m_parser.getNextResponse();
 
     if (resp.isValid()) responses.append(resp);
   } while (resp.isValid());
-
-  m_response = Response(m_response.getUnusedBuffer());
 
   for (auto r : responses) {
     sendResponse(r);

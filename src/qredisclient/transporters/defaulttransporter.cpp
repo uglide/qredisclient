@@ -152,8 +152,6 @@ void RedisClient::DefaultTransporter::error(
 
   emit errorOccurred(
       QString("Connection error: %1").arg(m_socket->errorString()));
-
-  if (m_response.isValid()) return sendResponse(m_response);
 }
 
 void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors) {
