@@ -16,18 +16,16 @@ class Response {
   ADD_EXCEPTION
 
  public:
-  enum Type { Status, Error, Integer, Bulk, MultiBulk, Unknown };
+  enum Type { String = 1, Array, Integer, Nil, Status, Error, Unknown };
 
  public:
   Response();
-  Response(const QByteArray &);
-  // Response(const Response &);
+  Response(Response::Type, const QVariant &);
+
   virtual ~Response(void);
 
-  QVariant getValue();
-  Type getType() const;
-  QByteArray source() const;
-  QString toRawString(long limit = 1500) const;
+  QVariant value() const;
+  Type type() const;
 
   bool isEmpty() const;
   bool isErrorMessage() const;
@@ -38,7 +36,11 @@ class Response {
   bool isValid();
   bool isMessage() const;
   bool isArray() const;
-  bool hasUnusedBuffer() const;
+
+  // Scan response
+  bool isValidScanResponse() const;
+  long long getCursor();
+  QVariantList getCollection();
 
   // Pub/Sub support
   QByteArray getChannel() const;
@@ -49,48 +51,10 @@ class Response {
   QByteArray getRedirectionHost() const;
   uint getRedirectionPort() const;
 
- public:
-  void setSource(const QByteArray &);
-  void appendToSource(const QByteArray &);
-  QByteArray getUnusedBuffer();
-  Response getNextResponse();
-  void clearBuffers();
-  void reset();
-
   static QString valueToHumanReadString(const QVariant &, int indentLevel = 0);
 
  protected:
-  Response(const QByteArray &, QSharedPointer<QVariant>);
-  Type getResponseType(const QByteArray &) const;
-  Type getResponseType(const char) const;
-
-  bool parse();
-  QSharedPointer<QVariant> getNextReplyFromBuffer();
-  void feed(const QByteArray &buffer);
-
-  long getReaderAbsolutePosition();
-
- protected:
-  QByteArray m_responseSource;
-  QSharedPointer<redisReader> m_redisReader;
-  QSharedPointer<QVariant> m_result;
-  long m_endOfValidResponseInBuffer;
-
- private:
-  /*
-   * hiredis custom functions
-   */
-  static void *createStringObject(const redisReadTask *task, char *str,
-                                  size_t len);
-  static void *createArrayObject(const redisReadTask *t, int elements);
-  static void *createIntegerObject(const redisReadTask *task, long long value);
-  static void *createNilObject(const redisReadTask *task);
-  static void freeObject(void *obj);
-
-  static const redisReplyObjectFunctions defaultFunctions;
-
-  static redisReader *redisReaderCreate(void);
+  Type m_type;
+  QVariant m_result;
 };
 }  // namespace RedisClient
-
-Q_DECLARE_METATYPE(QVector<QVariant *>)

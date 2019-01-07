@@ -7,7 +7,6 @@
 
 #include "command.h"
 #include "scancommand.h"
-#include "scanresponse.h"
 #include "transporters/defaulttransporter.h"
 #include "utils/compat.h"
 #include "utils/sync.h"
@@ -277,7 +276,7 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo() {
 
 void RedisClient::Connection::refreshServerInfo() {
   Response infoResult = internalCommandSync({"INFO", "ALL"});
-  m_serverInfo = ServerInfo::fromString(infoResult.getValue().toString());
+  m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
 }
 
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
@@ -396,7 +395,7 @@ void RedisClient::Connection::getNamespaceItems(
           return callback(NamespaceItems(), error);
         }
 
-        QList<QVariant> result = r.getValue().toList();
+        QList<QVariant> result = r.value().toList();
 
         if (result.size() != 2) {
           return callback(NamespaceItems(), "Invalid response from LUA script");
@@ -489,7 +488,7 @@ void RedisClient::Connection::processScanCommand(
                                       incrementalProcessing);
           }
 
-          callback(r.getValue(), r.getValue().toString());
+          callback(r.value(), r.value().toString());
           return;
         }
 
@@ -500,7 +499,7 @@ void RedisClient::Connection::processScanCommand(
 
         if (incrementalProcessing) result->clear();
 
-        if (!ScanResponse::isValidScanResponse(r)) {
+        if (!r.isValidScanResponse()) {
           if (result->isEmpty())
             callback(QVariant(),
                      incrementalProcessing ? END_OF_COLLECTION : QString());
@@ -510,24 +509,16 @@ void RedisClient::Connection::processScanCommand(
           return;
         }
 
-        RedisClient::ScanResponse *scanResp = (RedisClient::ScanResponse *)(&r);
+        result->append(r.getCollection());
 
-        if (!scanResp) {
-          callback(QVariant(),
-                   "Error occured on cast ScanResponse from Response.");
-          return;
-        }
-
-        result->append(scanResp->getCollection());
-
-        if (scanResp->getCursor() <= 0) {
+        if (r.getCursor() <= 0) {
           callback(QVariant(*result),
                    incrementalProcessing ? END_OF_COLLECTION : QString());
           return;
         }
 
         auto newCmd = cmd;
-        newCmd.setCursor(scanResp->getCursor());
+        newCmd.setCursor(r.getCursor());
 
         processScanCommand(newCmd, callback, result);
       });
@@ -589,7 +580,7 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
     return result;
   }
 
-  QVariantList slotsList = r.getValue().toList();
+  QVariantList slotsList = r.value().toList();
 
   foreach (QVariant clusterSlot, slotsList) {
     QVariantList details = clusterSlot.toList();
@@ -614,7 +605,7 @@ void RedisClient::Connection::auth() {
 
     Response testResult = internalCommandSync({"PING"});
 
-    if (testResult.toRawString() != "+PONG\r\n") {
+    if (testResult.value().toByteArray() != QByteArray("PONG")) {
       emit authError("Redis server requires password or password is not valid");
       emit error("AUTH ERROR");
       return;
@@ -638,7 +629,7 @@ void RedisClient::Connection::auth() {
         return;
       }
 
-      QVariantList result = mastersResult.getValue().toList();
+      QVariantList result = mastersResult.value().toList();
 
       if (result.size() == 0) {
         emit error(QString("Connection error: invalid response from sentinel"));

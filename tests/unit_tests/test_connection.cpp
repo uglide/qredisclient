@@ -27,7 +27,7 @@ void TestConnection::connectToHostAndRunCommand() {
 
   // then
   QCOMPARE(connection.isConnected(), true);
-  QCOMPARE(actualResult.toRawString(), QString("+PONG\r\n"));
+  QCOMPARE(actualResult.value().toString(), QString("PONG"));
 }
 
 void TestConnection::testScanCommand() {
@@ -37,7 +37,7 @@ void TestConnection::testScanCommand() {
   // when
   connection.connect();
   Response result = connection.commandSync("SCAN", "0");
-  QVariant value = result.getValue();
+  QVariant value = result.value();
 
   // then
   QCOMPARE(value.isNull(), false);
@@ -98,9 +98,9 @@ void TestConnection::runPipelineCommandSync() {
   RedisClient::Response response = connection.commandSync(cmd);
 
   QCOMPARE(response.isArray(), true);
-  QCOMPARE(response.getValue().toList().length(), 3);
-  QCOMPARE(response.toRawString(0).toUtf8(),
-           QByteArray("*3\r\n+OK\r\n:1\r\n:1\r\n"));
+  QCOMPARE(response.value().toList().length(), 3);
+  auto validResult = QVariantList() << QString("OK") << 1 << 1;
+  QCOMPARE(response.value().toList(), validResult);
 }
 
 void TestConnection::runPipelineCommandAsync() {
@@ -127,9 +127,9 @@ void TestConnection::runPipelineCommandAsync() {
   eventLoop.exec();  // Wait for callback to complete
 
   QCOMPARE(response.isArray(), true);
-  QCOMPARE(response.getValue().toList().length(), 3);
-  QCOMPARE(response.toRawString(0).toUtf8(),
-           QByteArray("*3\r\n+OK\r\n:1\r\n:1\r\n"));
+  QCOMPARE(response.value().toList().length(), 3);
+  auto validResult = QVariantList() << QString("OK") << 1 << 1;
+  QCOMPARE(response.value().toList(), validResult);
 }
 
 void TestConnection::benchmarkPipeline() {
@@ -146,17 +146,22 @@ void TestConnection::benchmarkPipeline() {
   // Measure the time it takes to complete the transaction:
   QTime t0;
   t0.start();
-  RedisClient::Response response = connection.commandSync(cmd);
+  RedisClient::Response response;
+  try {
+    response = connection.commandSync(cmd);
+  } catch (const RedisClient::Connection::Exception& e) {
+    qDebug() << "print" << e.what();
+  }
   int tf = t0.elapsed();
   QWARN(QString("Benchmark %1 HSET: %2 ms").arg(N).arg(tf).toUtf8());
 
   QCOMPARE(response.isArray(), true);
-  QCOMPARE(response.getValue().toList().length(), N);
+  QCOMPARE(response.value().toList().length(), N);
 
   // Read back the N'th value
   RedisClient::Response valResponse =
       connection.commandSync("hget", "h", QString("k%1").arg(N));
-  QCOMPARE(valResponse.getValue(), QVariant(N));
+  QCOMPARE(valResponse.value(), QVariant(N));
 }
 
 void TestConnection::benchmarkPipelineAsync() {
@@ -191,12 +196,12 @@ void TestConnection::benchmarkPipelineAsync() {
   QWARN(QString("Benchmark %1 HSET: %2 ms").arg(N).arg(tf).toUtf8());
 
   QCOMPARE(response.isArray(), true);
-  QCOMPARE(response.getValue().toList().length(), N);
+  QCOMPARE(response.value().toList().length(), N);
 
   // Read back the N'th value
   RedisClient::Response valResponse =
       connection.commandSync("hget", "ha", QString("k%1").arg(N));
-  QCOMPARE(valResponse.getValue(), QVariant(N));
+  QCOMPARE(valResponse.value(), QVariant(N));
 }
 
 void TestConnection::autoConnect() {
@@ -244,7 +249,7 @@ void TestConnection::subscribeAndUnsubscribe() {
 
   connection.command(QList<QByteArray>{"SUBSCRIBE", "ch1", "ch2", "ch3"}, this,
                      [&messagesRecieved](RedisClient::Response r, QString) {
-                       qDebug() << "recieved msg:" << r.getValue().toList();
+                       qDebug() << "recieved msg:" << r.value().toList();
                        messagesRecieved++;
                      });
   connectionPublisher.commandSync("PUBLISH", "ch1", "MSG1");
@@ -267,14 +272,14 @@ void TestConnection::checkTimeout() {
   int totalRuns = 20;
 
   for (int c = 0; c < totalRuns; c++) {
-    qDebug() << "Wait " << (c + 1) << "/" << totalRuns;
+    qWarning() << "Wait " << (c + 1) << "/" << totalRuns;
     wait(1000 * 10);
   }
 
   Response actualCommandResult = connection.commandSync("ping");
 
   // then
-  QCOMPARE(actualCommandResult.toRawString(), QString("+PONG\r\n"));
+  QCOMPARE(actualCommandResult.value().toString(), QString("PONG"));
 }
 
 void TestConnection::checkQueueProcessing() {
@@ -291,7 +296,7 @@ void TestConnection::checkQueueProcessing() {
 
   // then
   QCOMPARE(connection.waitForIdle(10000), true);
-  QCOMPARE(connection.commandSync("GET", "test_incr_key").getValue(),
+  QCOMPARE(connection.commandSync("GET", "test_incr_key").value(),
            QVariant(1000));
 }
 
@@ -310,7 +315,7 @@ void TestConnection::connectWithAuth() {
 
   // then
   QCOMPARE(actualConnectResult, true);
-  QCOMPARE(actualCommandResult.toRawString(), QString("+PONG\r\n"));
+  QCOMPARE(actualCommandResult.value().toString(), QString("PONG"));
 }
 
 void TestConnection::connectWithInvalidAuth() {
@@ -362,9 +367,8 @@ void TestConnection::connectWithInvalidConfig() {
 void TestConnection::testWithDummyTransporter() {
   // given
   // connection with dummy transporter
-  QString validResponse("+PONG\r\n");
-  QSharedPointer<Connection> connection =
-      getRealConnectionWithDummyTransporter(QStringList() << validResponse);
+  QSharedPointer<Connection> connection = getRealConnectionWithDummyTransporter(
+      QStringList() << QString("+PONG\r\n"));
 
   // when
   QVERIFY(connection->connect());
@@ -372,7 +376,7 @@ void TestConnection::testWithDummyTransporter() {
 
   // then
   QCOMPARE(connection->isConnected(), true);
-  QCOMPARE(actualResult.toRawString(), validResponse);
+  QCOMPARE(actualResult.value().toString(), QString("PONG"));
 }
 
 void TestConnection::testParseServerInfo() {
