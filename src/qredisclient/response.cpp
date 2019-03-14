@@ -43,7 +43,7 @@ bool RedisClient::Response::isValidScanResponse() const {
   QVariantList result = m_result.toList();
 
   return result.size() == 2 && result.at(0).canConvert(QMetaType::QString) &&
-         result.at(1).canConvert(QMetaType::QVariantList);
+         (result.at(1).canConvert(QMetaType::QVariantList) || result.at(1).isNull());
 }
 
 long long RedisClient::Response::getCursor() {
