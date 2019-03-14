@@ -358,9 +358,9 @@ void RedisClient::Connection::flushDbKeys(
 
 void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback,
                                               const QString &pattern,
-                                              uint dbIndex) {
+                                              uint dbIndex, long scanLimit) {
   QList<QByteArray> rawCmd{"scan",           "0",     "MATCH",
-                           pattern.toUtf8(), "COUNT", "10000"};
+                           pattern.toUtf8(), "COUNT", QString::number(scanLimit).toLatin1()};
   ScanCommand keyCmd(rawCmd, dbIndex);
 
   retrieveCollection(keyCmd, [this, callback](QVariant r, QString err) {

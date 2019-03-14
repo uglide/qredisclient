@@ -151,7 +151,7 @@ class Connection : public QObject {
    */
   virtual void getDatabaseKeys(RawKeysListCallback callback,
                                const QString &pattern = QString("*"),
-                               uint dbIndex = 0);
+                               uint dbIndex = 0, long scanLimit=10000);
 
   typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
   typedef QList<QByteArray> RootKeys;
