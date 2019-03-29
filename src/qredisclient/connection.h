@@ -151,7 +151,7 @@ class Connection : public QObject {
    */
   virtual void getDatabaseKeys(RawKeysListCallback callback,
                                const QString &pattern = QString("*"),
-                               uint dbIndex = 0, long scanLimit=10000);
+                               uint dbIndex = 0, long scanLimit = 10000);
 
   typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
   typedef QList<QByteArray> RootKeys;
@@ -212,6 +212,32 @@ class Connection : public QObject {
    */
   void command(QList<QByteArray> rawCmd, QObject *owner,
                RedisClient::Command::Callback callback, int db = -1);
+
+  /**
+   * @brief Hi-level wrapper with basic error handling
+   * @param rawCmd
+   * @param owner
+   * @param db
+   * @param callback
+   * @param errback
+   */
+  inline void cmd(QList<QByteArray> rawCmd, QObject *owner, int db,
+                  std::function<void(const RedisClient::Response &)> callback,
+                  std::function<void(const QString &)> errback) {
+    try {
+      this->command(rawCmd, owner,
+                    [callback, errback](RedisClient::Response r, QString err) {
+                      if (err.size() > 0) return errback(err);
+                      if (r.isErrorMessage())
+                        return errback(r.value().toString());
+
+                      return callback(r);
+                    },
+                    db);
+    } catch (const RedisClient::Connection::Exception &e) {
+      return errback(QString(e.what()));
+    }
+  }
 
   /**
    * @brief commandSync
