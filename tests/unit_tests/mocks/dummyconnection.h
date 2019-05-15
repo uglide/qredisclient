@@ -1,4 +1,5 @@
 #pragma once
+#include <asyncfuture.h>
 #include <QVariant>
 #include <functional>
 #include "qredisclient/connection.h"
@@ -53,13 +54,15 @@ class DummyConnection : public RedisClient::Connection {
     callback(resp, QString());
   }
 
-  void runCommand(const RedisClient::Command& cmd) override {
+  QFuture<RedisClient::Response> runCommand(
+      const RedisClient::Command& cmd) override {
     RedisClient::Response resp;
+    AsyncFuture::Deferred<RedisClient::Response> d;
 
     if (returnErrorOnCmdRun) {
       auto callback = cmd.getCallBack();
       callback(resp, QString("fake error"));
-      return;
+      return d.future();
     }
 
     if (fakeResponses.size()) {
@@ -74,6 +77,7 @@ class DummyConnection : public RedisClient::Connection {
 
     runCommandCalled++;
     executedCommands.push_back(cmd);
+    return d.future();
   }
 
   uint runCommandCalled;
