@@ -53,10 +53,10 @@ void RedisClient::AbstractTransporter::addCommand(const Command &cmd) {
   else
     m_commands.enqueue(cmd);
 
+  emit commandAdded();
+
   if ((cmd.isHiPriorityCommand() && isInitialized()) || m_loopTimer->isActive())
     processCommandQueue();
-
-  emit commandAdded();
 }
 
 void RedisClient::AbstractTransporter::cancelCommands(QObject *owner) {
@@ -334,7 +334,8 @@ void RedisClient::AbstractTransporter::runCommand(
 
   qDebug() << "Run command:" << command.getRawString() << " in db "
            << m_connection->m_dbNumber << " with timeout "
-           << m_connection->getConfig().executeTimeout();
+           << m_connection->getConfig().executeTimeout()
+           << "owner=" << command.getOwner();
 
   emit logEvent(QString("%1 > [runCommand] %2")
                     .arg(m_connection->getConfig().name())
