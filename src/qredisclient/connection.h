@@ -186,6 +186,13 @@ class Connection : public QObject {
    */
   HostList getMasterNodes();
 
+  /**
+   * @brief isCommandSupported
+   * @param rawCmd
+   * @return
+   */
+  virtual QFuture<bool> isCommandSupported(QList<QByteArray> rawCmd);
+
   /*
    * Command execution API
    */
@@ -221,21 +228,23 @@ class Connection : public QObject {
    * @param callback
    * @param errback
    */
-  inline void cmd(QList<QByteArray> rawCmd, QObject *owner, int db,
-                  std::function<void(const RedisClient::Response &)> callback,
-                  std::function<void(const QString &)> errback) {
+  inline QFuture<Response> cmd(
+      QList<QByteArray> rawCmd, QObject *owner, int db,
+      std::function<void(const RedisClient::Response &)> callback,
+      std::function<void(const QString &)> errback) {
     try {
-      this->command(rawCmd, owner,
-                    [callback, errback](RedisClient::Response r, QString err) {
-                      if (err.size() > 0) return errback(err);
-                      if (r.isErrorMessage())
-                        return errback(r.value().toString());
+      return this->command(
+          rawCmd, owner,
+          [callback, errback](RedisClient::Response r, QString err) {
+            if (err.size() > 0) return errback(err);
+            if (r.isErrorMessage()) return errback(r.value().toString());
 
-                      return callback(r);
-                    },
-                    db);
+            return callback(r);
+          },
+          db);
     } catch (const RedisClient::Connection::Exception &e) {
-      return errback(QString(e.what()));
+      errback(QString(e.what()));
+      return QFuture<Response>();
     }
   }
 

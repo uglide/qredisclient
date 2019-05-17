@@ -205,17 +205,18 @@ void RedisClient::Connection::retrieveCollectionIncrementally(
     RedisClient::Connection::IncrementalCollectionCallback callback) {
   if (!cmd.isValidScanCommand()) throw Exception("Invalid command");
 
-  processScanCommand(cmd,
-                     [this, callback](QVariant c, QString err) {
-                       if (err == END_OF_COLLECTION) {
-                         callback(c, QString(), true);
-                       } else if (!err.isEmpty()) {
-                         callback(c, err, true);
-                       } else {
-                         callback(c, QString(), false);
-                       }
-                     },
-                     QSharedPointer<QVariantList>(), true);
+  processScanCommand(
+      cmd,
+      [this, callback](QVariant c, QString err) {
+        if (err == END_OF_COLLECTION) {
+          callback(c, QString(), true);
+        } else if (!err.isEmpty()) {
+          callback(c, err, true);
+        } else {
+          callback(c, QString(), false);
+        }
+      },
+      QSharedPointer<QVariantList>(), true);
 }
 
 RedisClient::ConnectionConfig RedisClient::Connection::getConfig() const {
@@ -327,8 +328,9 @@ void RedisClient::Connection::flushDbKeys(
 void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback,
                                               const QString &pattern,
                                               uint dbIndex, long scanLimit) {
-  QList<QByteArray> rawCmd{"scan",           "0",     "MATCH",
-                           pattern.toUtf8(), "COUNT", QString::number(scanLimit).toLatin1()};
+  QList<QByteArray> rawCmd{"scan",  "0",
+                           "MATCH", pattern.toUtf8(),
+                           "COUNT", QString::number(scanLimit).toLatin1()};
   ScanCommand keyCmd(rawCmd, dbIndex);
 
   retrieveCollection(keyCmd, [this, callback](QVariant r, QString err) {
@@ -561,6 +563,23 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
   }
 
   return result;
+}
+
+QFuture<bool> RedisClient::Connection::isCommandSupported(
+    QList<QByteArray> rawCmd) {
+  auto d = QSharedPointer<AsyncFuture::Deferred<bool>>(
+      new AsyncFuture::Deferred<bool>());
+
+  cmd(
+      rawCmd, this, -1,
+      [d](RedisClient::Response r) {
+        d->complete(!r.isDisabledCommandErrorMessage());
+      },
+      [d](const QString &err) {
+        d->complete(!err.contains("unknown command"));
+      });
+
+  return d->future();
 }
 
 void RedisClient::Connection::auth() {
