@@ -134,6 +134,36 @@ void TestConnection::runPipelineCommandAsync() {
   QCOMPARE(response.value().toList(), validResult);
 }
 
+void TestConnection::runBinaryPipelineCommand() {
+  Connection connection(config, true);
+  QVERIFY(connection.connect());
+
+  RedisClient::Command cmd;
+  cmd.setPipelineCommand(true);
+  cmd.appendToPipeline({"SET", "crlf"});
+  cmd.append("\r\n");
+  cmd.appendToPipeline({"SET", "binary"});
+  QByteArray arr;
+  for (char k=31; k>=0; k--)
+    arr.append(k);
+  cmd.append(arr);
+
+  RedisClient::Response response = connection.commandSync(cmd);
+  QCOMPARE(response.isArray(), true);
+  QCOMPARE(response.value().toList().length(), 2);
+  auto validResult = QVariantList() << QString("OK") << QString("OK");
+  QCOMPARE(response.value().toList(), validResult);
+
+  // Read back and check content
+  response = connection.commandSync({"GET", "crlf"});
+  QCOMPARE(response.value().toByteArray(), QByteArray("\r\n"));
+
+  response = connection.commandSync({"GET", "binary"});
+  QCOMPARE(response.value().toByteArray().size(), 32);
+  QCOMPARE(response.value().toByteArray(), arr);
+}
+
+
 void TestConnection::benchmarkPipeline() {
   Connection connection(config, true);
   QVERIFY(connection.connect());
