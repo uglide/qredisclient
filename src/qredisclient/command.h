@@ -55,11 +55,11 @@ public:
   Command& append(const QByteArray& part);
 
   /**
-   * @brief Append a new command to pipeline
+   * @brief Add a new command to pipeline
    * @param List of arguments
    * @return Reference to current object
    */
-  Command& appendToPipeline(const QList<QByteArray> cmd);
+  Command& addToPipeline(const QList<QByteArray> cmd);
 
     /**
      * @brief length

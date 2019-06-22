@@ -92,10 +92,9 @@ void TestConnection::runPipelineCommandSync() {
   QVERIFY(connection.connect());
 
   RedisClient::Command cmd;
-  cmd.setPipelineCommand(true);
-  cmd.appendToPipeline({"SET", "pipelines", "rock"});
-  cmd.appendToPipeline({"HSET", "MyHash", "Key1", "1234"});
-  cmd.appendToPipeline({"HSET", "MyHash", "Key2", "ABCDEFGH"});
+  cmd.addToPipeline({"SET", "pipelines", "rock"});
+  cmd.addToPipeline({"HSET", "MyHash", "Key1", "1234"});
+  cmd.addToPipeline({"HSET", "MyHash", "Key2", "ABCDEFGH"});
   RedisClient::Response response = connection.commandSync(cmd);
 
   QCOMPARE(response.isArray(), true);
@@ -108,11 +107,9 @@ void TestConnection::runPipelineCommandAsync() {
   Connection connection(config, true);
   QVERIFY(connection.connect());
 
-  RedisClient::Command cmd;
-  cmd.setPipelineCommand(true);
-  cmd.appendToPipeline({"SET", "pipelines", "async"});
-  cmd.appendToPipeline({"HSET", "MyHashAsync", "Key1", "1234"});
-  cmd.appendToPipeline({"HSET", "MyHashAsync", "Key2", "ABCDEFGH"});
+  RedisClient::Command cmd({"SET", "pipelines", "async"});
+  cmd.addToPipeline({"HSET", "MyHashAsync", "Key1", "1234"});
+  cmd.addToPipeline({"HSET", "MyHashAsync", "Key2", "ABCDEFGH"});
 
   // Setup callback
   RedisClient::Response response;
@@ -139,10 +136,9 @@ void TestConnection::runBinaryPipelineCommand() {
   QVERIFY(connection.connect());
 
   RedisClient::Command cmd;
-  cmd.setPipelineCommand(true);
-  cmd.appendToPipeline({"SET", "crlf"});
+  cmd.addToPipeline({"SET", "crlf"});
   cmd.append("\r\n");
-  cmd.appendToPipeline({"SET", "binary"});
+  cmd.addToPipeline({"SET", "binary"});
   QByteArray arr;
   for (char k=31; k>=0; k--)
     arr.append(k);
@@ -170,11 +166,10 @@ void TestConnection::benchmarkPipeline() {
   connection.commandSync({"flushdb"});
 
   RedisClient::Command cmd;
-  cmd.setPipelineCommand(true);
   int N = 10000;
   for (int k = 1; k <= N; k++)
   {
-    cmd.appendToPipeline({"hset", "h"});
+    cmd.addToPipeline({"hset", "h"});
     cmd.append(QString("k%1").arg(k).toUtf8());
     cmd.append(QString("%1").arg(k).toUtf8());
   }
@@ -206,11 +201,10 @@ void TestConnection::benchmarkPipelineAsync() {
   connection.commandSync({"flushdb"});
 
   RedisClient::Command cmd;
-  cmd.setPipelineCommand(true);
   int N = 10000;
   for (int k = 1; k <= N; k++)
   {
-    cmd.appendToPipeline({"hset", "ha"});
+    cmd.addToPipeline({"hset", "ha"});
     cmd.append(QString("k%1").arg(k).toUtf8());
     cmd.append(QString("%1").arg(k).toUtf8());
   }

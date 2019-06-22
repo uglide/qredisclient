@@ -33,10 +33,14 @@ RedisClient::Command &RedisClient::Command::append(const QByteArray &part) {
   return *this;
 }
 
-RedisClient::Command &RedisClient::Command::appendToPipeline(const QList<QByteArray> cmd) {
-  if (m_isPipeline) {
-    m_pipelineCommands.append(cmd);
+RedisClient::Command &RedisClient::Command::addToPipeline(const QList<QByteArray> cmd) {
+  if(!m_isPipeline) {
+    // Convert and use existing command arguments if there any
+    if (!isEmpty())
+      m_pipelineCommands.append(m_commandWithArguments);
+    m_isPipeline = true;
   }
+  m_pipelineCommands.append(cmd);
   return *this;
 }
 
