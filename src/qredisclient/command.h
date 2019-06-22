@@ -54,6 +54,13 @@ public:
    */
   Command& append(const QByteArray& part);
 
+  /**
+   * @brief Append a new command to pipeline
+   * @param List of arguments
+   * @return Reference to current object
+   */
+  Command& appendToPipeline(const QList<QByteArray> cmd);
+
     /**
      * @brief length
      * @return Number of command arguments
@@ -169,15 +176,9 @@ protected:
      * @brief Serialize command to RESP format
      * @return
      */
-    QByteArray serializeToRESP() const;
+    QByteArray serializeToRESP(QList<QByteArray> args) const;
 
-    /**
-     * @brief Serialize command to Pipeline format
-     * @return
-     */
-    QByteArray serializeToPipeline() const;
-
- public:
+public:
   /**
    * @brief Parse command from raw string.
    * Useful for CLI clients.
@@ -188,6 +189,7 @@ protected:
 protected:
     QObject * m_owner;
     QList<QByteArray> m_commandWithArguments;
+    QList<QList<QByteArray>> m_pipelineCommands;
     int m_dbIndex;
     bool m_hiPriorityCommand;
     bool m_isPipeline;
