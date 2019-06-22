@@ -91,10 +91,11 @@ void TestConnection::runPipelineCommandSync() {
   Connection connection(config, true);
   QVERIFY(connection.connect());
 
-  RedisClient::Command cmd({"SET pipelines rock"});
-  cmd.append("HSET MyHash Key1 1234");
-  cmd.append("HSET MyHash Key2 ABCDEFGH");
+  RedisClient::Command cmd;
   cmd.setPipelineCommand(true);
+  cmd.appendToPipeline({"SET", "pipelines", "rock"});
+  cmd.appendToPipeline({"HSET", "MyHash", "Key1", "1234"});
+  cmd.appendToPipeline({"HSET", "MyHash", "Key2", "ABCDEFGH"});
   RedisClient::Response response = connection.commandSync(cmd);
 
   QCOMPARE(response.isArray(), true);
@@ -107,10 +108,11 @@ void TestConnection::runPipelineCommandAsync() {
   Connection connection(config, true);
   QVERIFY(connection.connect());
 
-  RedisClient::Command cmd({"SET pipelines async"});
-  cmd.append("HSET MyHashAsync Key1 1234");
-  cmd.append("HSET MyHashAsync Key2 ABCDEFGH");
+  RedisClient::Command cmd;
   cmd.setPipelineCommand(true);
+  cmd.appendToPipeline({"SET", "pipelines", "async"});
+  cmd.appendToPipeline({"HSET", "MyHashAsync", "Key1", "1234"});
+  cmd.appendToPipeline({"HSET", "MyHashAsync", "Key2", "ABCDEFGH"});
 
   // Setup callback
   RedisClient::Response response;
@@ -141,7 +143,11 @@ void TestConnection::benchmarkPipeline() {
   cmd.setPipelineCommand(true);
   int N = 10000;
   for (int k = 1; k <= N; k++)
-    cmd.append(QString("hset h k%1 %1").arg(k).toUtf8());
+  {
+    cmd.appendToPipeline({"hset", "h"});
+    cmd.append(QString("k%1").arg(k).toUtf8());
+    cmd.append(QString("%1").arg(k).toUtf8());
+  }
 
   // Measure the time it takes to complete the transaction:
   QTime t0;
@@ -173,7 +179,11 @@ void TestConnection::benchmarkPipelineAsync() {
   cmd.setPipelineCommand(true);
   int N = 10000;
   for (int k = 1; k <= N; k++)
-    cmd.append(QString("hset ha k%1 %1").arg(k).toUtf8());
+  {
+    cmd.appendToPipeline({"hset", "ha"});
+    cmd.append(QString("k%1").arg(k).toUtf8());
+    cmd.append(QString("%1").arg(k).toUtf8());
+  }
 
   // Setup callback
   int tf;

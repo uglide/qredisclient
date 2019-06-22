@@ -106,10 +106,11 @@ void TestCommand::scanCommandIsValid_data()
 
 void TestCommand::pipelineCommand()
 {
-    RedisClient::Command cmd({"PING"});
-    cmd.append("PING");
-    cmd.append("PING");
+    RedisClient::Command cmd;
     cmd.setPipelineCommand(true);
+    cmd.appendToPipeline({"PING"});
+    cmd.appendToPipeline({"SET", "foo"});
+    cmd.append("bar");  // Append part to previous command
 
     QCOMPARE(cmd.isEmpty(), false);
     QCOMPARE(cmd.isValid(), true);
@@ -119,5 +120,5 @@ void TestCommand::pipelineCommand()
     QCOMPARE(cmd.isUnSubscriptionCommand(), false);
 
     QByteArray actualResult = cmd.getByteRepresentation();
-    QCOMPARE(actualResult, QByteArray("MULTI\r\nPING\r\nPING\r\nPING\r\nEXEC\r\n"));
+    QCOMPARE(actualResult, QByteArray("*1\r\n$5\r\nMULTI\r\n*1\r\n$4\r\nPING\r\n*3\r\n$3\r\nSET\r\n$3\r\nfoo\r\n$3\r\nbar\r\n*1\r\n$4\r\nEXEC\r\n"));
 }

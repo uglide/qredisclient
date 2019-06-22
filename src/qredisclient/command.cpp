@@ -26,13 +26,26 @@ RedisClient::Command::Command(const QList<QByteArray> &cmd, QObject *context,
 RedisClient::Command::~Command() {}
 
 RedisClient::Command &RedisClient::Command::append(const QByteArray &part) {
-  m_commandWithArguments.append(part);
+  if (!m_isPipeline)
+    m_commandWithArguments.append(part);
+  else
+    m_pipelineCommands.last().append(part);
+  return *this;
+}
+
+RedisClient::Command &RedisClient::Command::appendToPipeline(const QList<QByteArray> cmd) {
+  if (m_isPipeline) {
+    m_pipelineCommands.append(cmd);
+  }
   return *this;
 }
 
 int RedisClient::Command::length() const
 {
+  if (!m_isPipeline)
     return m_commandWithArguments.length();
+  else
+    return m_pipelineCommands.length();
 }
 
 QList<QByteArray> RedisClient::Command::splitCommandString(const QString &rawCommand)
@@ -160,15 +173,25 @@ QString RedisClient::Command::getPartAsString(int i) const {
 }
 
 bool RedisClient::Command::isEmpty() const {
-  return m_commandWithArguments.isEmpty();
+  if (!m_isPipeline)
+    return m_commandWithArguments.isEmpty();
+  else
+    return m_pipelineCommands.isEmpty();
 }
 
 QByteArray RedisClient::Command::getByteRepresentation() const
 {
     if (!m_isPipeline)
-        return serializeToRESP();
+        return serializeToRESP(m_commandWithArguments);
     else
-        return serializeToPipeline();
+    {
+        QByteArray result = serializeToRESP({"MULTI"});
+        QList<QByteArray> pipelineCmd;
+        foreach (pipelineCmd, m_pipelineCommands)
+            result.append(serializeToRESP(pipelineCmd));
+        result.append(serializeToRESP({"EXEC"}));
+        return result;
+    }
 }
 
 void RedisClient::Command::markAsHiPriorityCommand()
@@ -181,12 +204,12 @@ bool RedisClient::Command::isValid() const
     return !isEmpty();
 }
 
-QByteArray RedisClient::Command::serializeToRESP() const
+QByteArray RedisClient::Command::serializeToRESP(QList<QByteArray> args) const
 {
     QByteArray result;
-    result.append(QString("*%1\r\n").arg(m_commandWithArguments.length()));
+    result.append(QString("*%1\r\n").arg(args.length()));
 
-  for (QByteArray partArray : m_commandWithArguments) {
+  for (QByteArray partArray : args) {
     result.append("$");
     result.append(QString::number(partArray.size()));
     result.append("\r\n");
@@ -195,14 +218,4 @@ QByteArray RedisClient::Command::serializeToRESP() const
   }
 
   return result;
-}
-
-QByteArray RedisClient::Command::serializeToPipeline() const
-{
-    char separator[] = "\r\n";
-    QByteArray result("MULTI\r\n");
-    for (QByteArray partArray : m_commandWithArguments)
-        result.append(partArray).append(separator, 2);
-    result.append("EXEC\r\n");
-    return result;
 }
