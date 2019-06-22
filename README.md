@@ -37,7 +37,13 @@ int main(int argc, char *argv[])
     // do stuff
   });
 
-  // See more usage examples in examples folder
+  // Use addToPipeline() to enable MULTI+EXEC transactions
+  RedisClient::Command cmd;
+  cmd.addToPipeline({"SET", "foo", "bar"});
+  cmd.addToPipeline({"HSET" "foz", "key", "value"});
+  RedisClient::Response response = connection.commandSync(cmd);
+
+  // See more usage examples in the tests/unit_tests folder
 }
 
 ```

@@ -107,9 +107,8 @@ void TestCommand::scanCommandIsValid_data()
 void TestCommand::pipelineCommand()
 {
     RedisClient::Command cmd;
-    cmd.setPipelineCommand(true);
-    cmd.appendToPipeline({"PING"});
-    cmd.appendToPipeline({"SET", "foo"});
+    cmd.addToPipeline({"PING"});
+    cmd.addToPipeline({"SET", "foo"});
     cmd.append("bar");  // Append part to previous command
 
     QCOMPARE(cmd.isEmpty(), false);
