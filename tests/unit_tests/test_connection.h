@@ -54,6 +54,7 @@ class TestConnection : public BaseTestCase {
    */
   void runPipelineCommandSync();
   void runPipelineCommandAsync();
+  void runBinaryPipelineCommand();
   void benchmarkPipeline();
   void benchmarkPipelineAsync();
 
