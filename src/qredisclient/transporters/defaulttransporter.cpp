@@ -168,12 +168,9 @@ void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors) {
 }
 
 void RedisClient::DefaultTransporter::reconnect() {
-  if (m_loopTimer->isActive()) m_loopTimer->stop();
-
   m_socket->abort();
 
   if (connectToHost()) {
-    resetDbIndex();
-    m_loopTimer->start();
+    resetDbIndex();    
   }
 }

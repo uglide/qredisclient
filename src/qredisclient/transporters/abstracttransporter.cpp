@@ -21,7 +21,6 @@ RedisClient::AbstractTransporter::AbstractTransporter(
 
 RedisClient::AbstractTransporter::~AbstractTransporter() {
   disconnectFromHost();
-  m_loopTimer.clear();
 }
 
 void RedisClient::AbstractTransporter::init() {
@@ -29,20 +28,14 @@ void RedisClient::AbstractTransporter::init() {
 
   qDebug() << "Init transporter";
 
-  m_loopTimer = QSharedPointer<QTimer>(new QTimer);
-  m_loopTimer->setSingleShot(false);
-  m_loopTimer->setInterval(1000);
-  connect(m_loopTimer.data(), SIGNAL(timeout()), this,
-          SLOT(processCommandQueue()));
   connect(m_connection, &Connection::authOk, this,
-          &AbstractTransporter::runProcessingLoop);
+          &AbstractTransporter::processCommandQueue);
 
   initSocket();
   connectToHost();
 }
 
 void RedisClient::AbstractTransporter::disconnectFromHost() {
-  if (m_loopTimer && m_loopTimer->isActive()) m_loopTimer->stop();
   cancelRunningCommands();
   m_commands.clear();
 }
@@ -55,8 +48,7 @@ void RedisClient::AbstractTransporter::addCommand(const Command &cmd) {
 
   emit commandAdded();
 
-  if ((cmd.isHiPriorityCommand() && isInitialized()) || m_loopTimer->isActive())
-    processCommandQueue();
+  processCommandQueue();
 }
 
 void RedisClient::AbstractTransporter::cancelCommands(QObject *owner) {
@@ -181,6 +173,10 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
     return;
   }
 
+  auto retry = [this]() {
+      QTimer::singleShot(100, this, &RedisClient::AbstractTransporter::processCommandQueue);
+  };
+
   // Do not allow commands execution if we selecting db now
   for (auto curr = m_runningCommands.begin();
        curr != m_runningCommands.end();) {
@@ -188,7 +184,7 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
 
     if (rCmd->cmd.isSelectCommand()) {
       qDebug() << "Block commands. Wait for SELECT finish.";
-      return;
+      return retry();
     }
 
     ++curr;
@@ -196,14 +192,14 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
 
   if (m_runningCommands.size() > 0 && m_commands.head().isSelectCommand()) {
     qDebug() << "Wait for regular commands before db SELECT";
-    return;
+    return retry();
   }
 
   if (m_commands.head().hasDbIndex() &&
       m_connection->m_dbNumber != m_commands.head().getDbIndex()) {
     if (m_runningCommands.size() > 0) {
       qDebug() << "Wait for regular commands before db SELECT";
-      return;
+      return retry();
     }
 
     QList<QByteArray> selectCmdRaw = {
@@ -211,15 +207,12 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
     Command selectCmd(selectCmdRaw);
     qDebug() << "SELECT proper DB for running command.";
     runCommand(selectCmd);
-    return;
+    return retry();
   }
 
   runCommand(m_commands.dequeue());
-}
 
-void RedisClient::AbstractTransporter::runProcessingLoop() {
-  qDebug() << "Start processing loop in transporter";
-  m_loopTimer->start();
+  return retry();
 }
 
 void RedisClient::AbstractTransporter::logResponse(
@@ -250,7 +243,6 @@ void RedisClient::AbstractTransporter::processClusterRedirect(
 
   m_commands.prepend(runningCommand->cmd);
   runningCommand.clear();
-  m_loopTimer->stop();
 
   QString host;
   int port = response.getRedirectionPort();
