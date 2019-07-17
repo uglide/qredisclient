@@ -414,7 +414,7 @@ void RedisClient::Connection::createTransporter() {
     m_transporter =
         QSharedPointer<AbstractTransporter>(new SshTransporter(this));
 #else
-    throw Exception("QRedisClient compiled without ssh support.");
+    throw SSHSupportException("QRedisClient compiled without ssh support.");
 #endif
   } else {
     m_transporter =
@@ -749,3 +749,6 @@ QVariantMap RedisClient::ServerInfo::ParsedServerInfo::toVariantMap() {
 
   return categories;
 }
+
+RedisClient::Connection::SSHSupportException::SSHSupportException(const QString &e)
+    : Connection::Exception(e) {}

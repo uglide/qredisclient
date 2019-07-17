@@ -49,13 +49,18 @@ struct ServerInfo {
  */
 class Connection : public QObject {
   Q_OBJECT
-  ADD_EXCEPTION
+  ADD_EXCEPTION  
 
   friend class AbstractTransporter;
 
  public:
   enum class Mode { Normal, PubSub, Cluster, Sentinel };
   class InvalidModeException : public Connection::Exception {};
+
+  class SSHSupportException : public Connection::Exception {
+  public:
+      SSHSupportException(const QString& e);
+  };
 
  public:
   /**
