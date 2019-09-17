@@ -61,20 +61,19 @@ bool RedisClient::Connection::connect(bool wait) {
   QObject::connect(this, &Connection::authError, this,
                    [this](const QString &) { disconnect(); });
 
-  SignalWaiter waiter(m_config.connectionTimeout());
-  waiter.addAbortSignal(this, &Connection::shutdownStart);
-
   if (wait) {
+    SignalWaiter waiter(m_config.connectionTimeout());
+    waiter.addAbortSignal(this, &Connection::shutdownStart);
     waiter.addAbortSignal(m_transporter.data(),
                           &AbstractTransporter::errorOccurred);
     waiter.addAbortSignal(this, &Connection::authError);
     waiter.addSuccessSignal(this, &Connection::authOk);
+    m_transporterThread->start();
+    return waiter.wait();
   } else {
-    waiter.addSuccessSignal(m_transporterThread.data(), &QThread::started);
+     m_transporterThread->start();
+     return true;
   }
-
-  m_transporterThread->start();
-  return waiter.wait();
 }
 
 bool RedisClient::Connection::isConnected() {
@@ -147,14 +146,22 @@ QFuture<RedisClient::Response> RedisClient::Connection::runCommand(
 
   if (!isConnected()) {
     if (m_autoConnect) {
-      qDebug()
-          << "Connect to Redis before running command (m_autoConnect == true)";
-      if (!connect(false) || !m_transporter) {
-        throw Exception(
-            "Cannot connect to redis-server. Details are available in "
-            "connection log.");
-      }
-      qDebug() << "Continue command execution";
+        auto d = QSharedPointer<AsyncFuture::Deferred<RedisClient::Response>>(
+            new AsyncFuture::Deferred<RedisClient::Response>()
+        );
+
+        QObject::connect(this, &Connection::authOk, this, [this, cmd, d](){
+            qDebug() << "Autoconnect run command";
+            d->complete(runCommand(cmd));
+        });
+        QObject::connect(this, &Connection::error, this, [cmd, d](){
+            qDebug() << "autoconnect cancel future";
+            d->cancel();
+        });
+
+        connect(false);
+
+        return d->future();
     } else {
       throw Exception("Try run command in not connected state");
     }
@@ -166,19 +173,11 @@ QFuture<RedisClient::Response> RedisClient::Connection::runCommand(
                      static_cast<Qt::ConnectionType>(Qt::QueuedConnection |
                                                      Qt::UniqueConnection));
 
-  // wait for signal from transporter
-  SignalWaiter waiter(m_config.executeTimeout());
-  waiter.addSuccessSignal(m_transporter.data(),
-                          &RedisClient::AbstractTransporter::commandAdded);
-  waiter.addAbortSignal(m_transporter.data(),
-                        &RedisClient::AbstractTransporter::errorOccurred);
-  waiter.addAbortSignal(this, &Connection::shutdownStart);
+  auto deferred = cmd.getDeferred();
 
   emit addCommandToWorker(cmd);
 
-  if (!waiter.wait()) cmd.getDeferred().cancel();
-
-  return cmd.getDeferred().future();
+  return deferred.future();
 }
 
 bool RedisClient::Connection::waitForIdle(uint timeout) {
