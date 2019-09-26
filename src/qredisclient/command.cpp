@@ -154,6 +154,9 @@ void RedisClient::Command::setPipelineCommand(const bool enable)
 
 int RedisClient::Command::getDbIndex() const
 {
+    if (isSelectCommand()) {
+        return m_commandWithArguments.at(1).toInt();
+    }
     return m_dbIndex;
 }
 

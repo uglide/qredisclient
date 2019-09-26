@@ -55,11 +55,6 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
     RedisClient::Response r(RedisClient::Response::Type::String, "PONG");
     fakeResponses.push_front(r);
 
-    m_loopTimer = QSharedPointer<QTimer>(new QTimer);
-    m_loopTimer->setSingleShot(false);
-    m_loopTimer->setInterval(1000);
-    m_loopTimer->start();
-
     emit connected();
   }
   virtual void disconnect() { disconnectCalls++; }
