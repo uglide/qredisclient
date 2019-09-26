@@ -245,7 +245,7 @@ void TestConnection::autoConnect() {
   // when
   bool hasException = false;
   try {
-    connection.commandSync({"PING"});  // valid
+    connection.command({"PING"});  // valid
   } catch (Connection::Exception&) {
     hasException = true;
   }
@@ -286,9 +286,9 @@ void TestConnection::subscribeAndUnsubscribe() {
                        qDebug() << "recieved msg:" << r.value().toList();
                        messagesRecieved++;
                      });
-  connectionPublisher.commandSync({"PUBLISH", "ch1", "MSG1"});
-  connectionPublisher.commandSync({"PUBLISH", "ch2", "MSG2"});
-  connectionPublisher.commandSync({"PUBLISH", "ch3", "MSG3"});
+  connectionPublisher.command({"PUBLISH", "ch1", "MSG1"});
+  connectionPublisher.command({"PUBLISH", "ch2", "MSG2"});
+  connectionPublisher.command({"PUBLISH", "ch3", "MSG3"});
 
   wait(5000);
 
@@ -322,7 +322,7 @@ void TestConnection::checkQueueProcessing() {
 
   // when
   QVERIFY(connection.connect());
-  connection.commandSync({"SET", "test_incr_key", "0"});
+  connection.command({"SET", "test_incr_key", "0"});
 
   for (int i = 0; i < 1000; ++i) {
     connection.command({"INCR", "test_incr_key"});
