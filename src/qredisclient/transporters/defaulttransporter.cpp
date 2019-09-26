@@ -134,10 +134,11 @@ void RedisClient::DefaultTransporter::sendCommand(const QByteArray &cmd) {
 
   while (total < cmd.size()) {
     sent = m_socket->write(data + total, cmd.size() - total);
-    qDebug() << "Bytes written to socket" << sent;
     total += sent;
   }
-  m_socket->flush();
+
+  if (m_socket->bytesToWrite() > 1000 || m_commands.size() == 0)
+    m_socket->flush();
 }
 
 void RedisClient::DefaultTransporter::error(
@@ -168,12 +169,9 @@ void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors) {
 }
 
 void RedisClient::DefaultTransporter::reconnect() {
-  if (m_loopTimer->isActive()) m_loopTimer->stop();
-
   m_socket->abort();
 
   if (connectToHost()) {
     resetDbIndex();
-    m_loopTimer->start();
   }
 }

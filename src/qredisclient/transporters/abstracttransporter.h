@@ -44,7 +44,6 @@ class AbstractTransporter : public QObject {
   virtual void reconnect() = 0;
   virtual void reconnectTo(const QString& host, int port);
   virtual void processCommandQueue();
-  virtual void runProcessingLoop();
   virtual void cancelRunningCommands();
 
  protected:
@@ -80,7 +79,6 @@ class AbstractTransporter : public QObject {
   Connection* m_connection;
   QQueue<QSharedPointer<RunningCommand>> m_runningCommands;
   QQueue<Command> m_commands;
-  QSharedPointer<QTimer> m_loopTimer;
   typedef QHash<QByteArray, QSharedPointer<ResponseEmitter>> Subscriptions;
   Subscriptions m_subscriptions;
   bool m_reconnectEnabled;
