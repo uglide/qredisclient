@@ -262,8 +262,6 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
                           .arg(m_config.port()));
     }
 
-    qDebug() << ">>Connected to " << m_config.host() << ":" << m_config.port();
-
     getDatabaseKeys(m_collectClusterNodeKeys, pattern);
   };
 
@@ -274,9 +272,6 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
     }
 
     result->append(res);
-
-    qDebug() << ">>Processed results for " << m_config.host() << ":"
-             << m_config.port();
 
     if (!hasNotVisitedClusterNodes()) return callback(*result, QString());
 
@@ -407,8 +402,6 @@ void RedisClient::Connection::getNamespaceItems(
 
     foreach (QString key, rootKeys) { keys.append(key.toUtf8()); }
 
-    qDebug() << "ns items is loaded via lua script";
-
     callback(NamespaceItems(rootNs, keys), QString());
   });
 
@@ -507,7 +500,6 @@ void RedisClient::Connection::processScanCommand(
 void RedisClient::Connection::changeCurrentDbNumber(int db) {
   if (m_dbNumberMutex.tryLock(5000)) {
     m_dbNumber = db;
-    qDebug() << "DB was selected:" << db;
     m_dbNumberMutex.unlock();
   } else {
     qWarning() << "Cannot lock db number mutex!";
