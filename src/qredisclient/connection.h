@@ -155,7 +155,7 @@ class Connection : public QObject {
    */
   virtual void getDatabaseKeys(RawKeysListCallback callback,
                                const QString &pattern = QString("*"),
-                               uint dbIndex = 0, long scanLimit = 10000);
+                               int dbIndex = 0, long scanLimit = 10000);
 
   typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
   typedef QList<QByteArray> RootKeys;
@@ -166,7 +166,7 @@ class Connection : public QObject {
   virtual void getNamespaceItems(NamespaceItemsCallback callback,
                                  const QString &nsSeparator,
                                  const QString &pattern = QString("*"),
-                                 uint dbIndex = 0);
+                                 int dbIndex = 0);
 
   /**
    * @brief getClusterKeys - async keys loading from all cluster nodes
@@ -179,7 +179,7 @@ class Connection : public QObject {
   /**
    * @brief flushDbKeys - Remove keys on all master nodes
    */
-  virtual void flushDbKeys(uint dbIndex,
+  virtual void flushDbKeys(int dbIndex,
                            std::function<void(const QString &)> callback);
 
   typedef QPair<QString, int> Host;
@@ -347,9 +347,11 @@ class Connection : public QObject {
 
   void changeCurrentDbNumber(int db);
 
-  bool clusterConnectToNextMasterNode();
+  void clusterConnectToNextMasterNode(std::function<void(const QString& err)> callback);
 
   bool hasNotVisitedClusterNodes() const;
+
+  void callAfterConnect(std::function<void(const QString& err)> callback);
 
  protected slots:
   void auth();
@@ -365,7 +367,7 @@ class Connection : public QObject {
   QMutex m_dbNumberMutex;
   bool m_autoConnect;
   bool m_stoppingTransporter;
-  RawKeysListCallback m_wrapper;
+  RawKeysListCallback m_collectClusterNodeKeys;
   RedisClient::Command::Callback m_cmdCallback;
   QSharedPointer<HostList> m_notVisitedMasterNodes;
 };
