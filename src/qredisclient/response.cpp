@@ -131,7 +131,7 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value,
 }
 
 bool RedisClient::Response::isErrorMessage() const {
-  return m_type == Type::Error && m_result.toByteArray().startsWith("ERR");
+  return m_type == Type::Error;
 }
 
 bool RedisClient::Response::isErrorStateMessage() const {

@@ -71,8 +71,8 @@ bool RedisClient::Connection::connect(bool wait) {
     m_transporterThread->start();
     return waiter.wait();
   } else {
-     m_transporterThread->start();
-     return true;
+    m_transporterThread->start();
+    return true;
   }
 }
 
@@ -146,22 +146,20 @@ QFuture<RedisClient::Response> RedisClient::Connection::runCommand(
 
   if (!isConnected()) {
     if (m_autoConnect) {
-        auto d = QSharedPointer<AsyncFuture::Deferred<RedisClient::Response>>(
-            new AsyncFuture::Deferred<RedisClient::Response>()
-        );
+      auto d = QSharedPointer<AsyncFuture::Deferred<RedisClient::Response>>(
+          new AsyncFuture::Deferred<RedisClient::Response>());
 
-        QObject::connect(this, &Connection::authOk, this, [this, cmd, d](){
-            qDebug() << "Autoconnect run command";
-            d->complete(runCommand(cmd));
-        });
-        QObject::connect(this, &Connection::error, this, [cmd, d](){
-            qDebug() << "autoconnect cancel future";
-            d->cancel();
-        });
+      callAfterConnect([this, cmd, d](const QString &err) {
+        if (err.isEmpty()) {
+          d->complete(runCommand(cmd));
+        } else {
+          d->cancel();
+        }
+      });
 
-        connect(false);
+      connect(false);
 
-        return d->future();
+      return d->future();
     } else {
       throw Exception("Try run command in not connected state");
     }
@@ -206,7 +204,7 @@ void RedisClient::Connection::retrieveCollectionIncrementally(
 
   processScanCommand(
       cmd,
-      [this, callback](QVariant c, QString err) {
+      [callback](QVariant c, QString err) {
         if (err == END_OF_COLLECTION) {
           callback(c, QString(), true);
         } else if (!err.isEmpty()) {
@@ -256,19 +254,19 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
   m_notVisitedMasterNodes =
       QSharedPointer<HostList>(new HostList(getMasterNodes()));
 
-  auto runOperationForNextNode = [this, pattern, callback, result]() {
-    if (clusterConnectToNextMasterNode()) {
-      return getDatabaseKeys(m_wrapper, pattern);
-    } else {
+  auto onConnect = [this, callback, pattern, result](const QString &err) {
+    if (!err.isEmpty()) {
       return callback(*result,
                       QObject::tr("Cannot connect to cluster node %1:%2")
                           .arg(m_config.host())
                           .arg(m_config.port()));
     }
+
+    getDatabaseKeys(m_collectClusterNodeKeys, pattern);
   };
 
-  m_wrapper = [this, result, callback, runOperationForNextNode](
-                  const RawKeysList &res, const QString &err) {
+  m_collectClusterNodeKeys = [this, result, callback, onConnect](
+                                 const RawKeysList &res, const QString &err) {
     if (!err.isEmpty()) {
       return callback(RawKeysList(), err);
     }
@@ -277,62 +275,69 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
 
     if (!hasNotVisitedClusterNodes()) return callback(*result, QString());
 
-    runOperationForNextNode();
+    clusterConnectToNextMasterNode(onConnect);
   };
 
-  runOperationForNextNode();
+  clusterConnectToNextMasterNode(onConnect);
 }
 
 void RedisClient::Connection::flushDbKeys(
-    uint dbIndex, std::function<void(const QString &)> callback) {
-  auto runOperationForNextNode = [this, dbIndex, callback]() {
-    if (clusterConnectToNextMasterNode()) {
-      command({"FLUSHDB"}, this, m_cmdCallback, dbIndex);
-      return;
-    } else {
-      return callback(QObject::tr("Cannot connect to cluster node %1:%2")
-                          .arg(m_config.host())
-                          .arg(m_config.port()));
-    }
-  };
-
-  m_cmdCallback = [this, callback, dbIndex, runOperationForNextNode](
-                      const RedisClient::Response &, const QString &error) {
-    if (!error.isEmpty()) {
-      callback(QString(QObject::tr("Cannot flush db (%1): %2"))
-                   .arg(dbIndex)
-                   .arg(error));
-      return;
-    }
-
-    if (mode() == Mode::Cluster) {
-      if (!hasNotVisitedClusterNodes()) return callback(QString());
-
-      runOperationForNextNode();
-    } else {
-      callback(QString());
-    }
-  };
-
+    int dbIndex, std::function<void(const QString &)> callback) {
   if (mode() == Mode::Cluster) {
     m_notVisitedMasterNodes =
         QSharedPointer<HostList>(new HostList(getMasterNodes()));
 
-    runOperationForNextNode();
+    auto onConnect = [this, callback](const QString &err) {
+      if (!err.isEmpty()) {
+        return callback(QObject::tr("Cannot connect to cluster node %1:%2")
+                            .arg(m_config.host())
+                            .arg(m_config.port()));
+      }
+
+      command({"FLUSHDB"}, this, m_cmdCallback);
+    };
+
+    m_cmdCallback = [this, callback, dbIndex, onConnect](
+                        const RedisClient::Response &, const QString &error) {
+      if (!error.isEmpty()) {
+        callback(QString(QObject::tr("Cannot flush db (%1): %2"))
+                     .arg(dbIndex)
+                     .arg(error));
+        return;
+      }
+
+      if (!hasNotVisitedClusterNodes()) return callback(QString());
+
+      clusterConnectToNextMasterNode(onConnect);
+    };
+
+    clusterConnectToNextMasterNode(onConnect);
   } else {
-    command({"FLUSHDB"}, this, m_cmdCallback, dbIndex);
+    command(
+        {"FLUSHDB"}, this,
+        [dbIndex, callback](const RedisClient::Response &,
+                            const QString &error) {
+          if (!error.isEmpty()) {
+            callback(QString(QObject::tr("Cannot flush db (%1): %2"))
+                         .arg(dbIndex)
+                         .arg(error));
+          } else {
+            callback(QString());
+          }
+        },
+        dbIndex);
   }
 }
 
 void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback,
                                               const QString &pattern,
-                                              uint dbIndex, long scanLimit) {
+                                              int dbIndex, long scanLimit) {
   QList<QByteArray> rawCmd{"scan",  "0",
                            "MATCH", pattern.toUtf8(),
                            "COUNT", QString::number(scanLimit).toLatin1()};
   ScanCommand keyCmd(rawCmd, dbIndex);
 
-  retrieveCollection(keyCmd, [this, callback](QVariant r, QString err) {
+  retrieveCollection(keyCmd, [callback](QVariant r, QString err) {
     if (!err.isEmpty())
       return callback(RawKeysList(), QString("Cannot load keys: %1").arg(err));
 
@@ -344,7 +349,7 @@ void RedisClient::Connection::getDatabaseKeys(RawKeysListCallback callback,
 
 void RedisClient::Connection::getNamespaceItems(
     RedisClient::Connection::NamespaceItemsCallback callback,
-    const QString &nsSeparator, const QString &filter, uint dbIndex) {
+    const QString &nsSeparator, const QString &filter, int dbIndex) {
   QFile script("://scan.lua");
   if (!script.open(QIODevice::ReadOnly)) {
     qWarning() << "Cannot open LUA resource";
@@ -358,50 +363,47 @@ void RedisClient::Connection::getNamespaceItems(
 
   Command evalCmd(rawCmd, dbIndex);
 
-  evalCmd.setCallBack(
-      this, [this, callback](RedisClient::Response r, QString error) {
-        if (!error.isEmpty()) {
-          return callback(NamespaceItems(), error);
-        }
+  evalCmd.setCallBack(this, [callback](RedisClient::Response r, QString error) {
+    if (!error.isEmpty()) {
+      return callback(NamespaceItems(), error);
+    }
 
-        QList<QVariant> result = r.value().toList();
+    QList<QVariant> result = r.value().toList();
 
-        if (result.size() != 2) {
-          return callback(NamespaceItems(), "Invalid response from LUA script");
-        }
+    if (result.size() != 2) {
+      return callback(NamespaceItems(), "Invalid response from LUA script");
+    }
 
-        QJsonDocument rootNamespacesJson =
-            QJsonDocument::fromJson(result[0].toByteArray());
-        QJsonDocument rootKeysJson =
-            QJsonDocument::fromJson(result[1].toByteArray());
+    QJsonDocument rootNamespacesJson =
+        QJsonDocument::fromJson(result[0].toByteArray());
+    QJsonDocument rootKeysJson =
+        QJsonDocument::fromJson(result[1].toByteArray());
 
-        if (rootNamespacesJson.isEmpty() || rootKeysJson.isEmpty() ||
-            !(rootNamespacesJson.isObject() && rootKeysJson.isObject())) {
-          return callback(NamespaceItems(), "Invalid response from LUA script");
-        }
+    if (rootNamespacesJson.isEmpty() || rootKeysJson.isEmpty() ||
+        !(rootNamespacesJson.isObject() && rootKeysJson.isObject())) {
+      return callback(NamespaceItems(), "Invalid response from LUA script");
+    }
 
-        QVariantMap rootNamespaces = rootNamespacesJson.toVariant().toMap();
-        QList<QString> rootKeys = rootKeysJson.toVariant().toMap().keys();
+    QVariantMap rootNamespaces = rootNamespacesJson.toVariant().toMap();
+    QList<QString> rootKeys = rootKeysJson.toVariant().toMap().keys();
 
-        QVariantMap::const_iterator i = rootNamespaces.constBegin();
-        RootNamespaces rootNs;
-        rootNs.reserve(rootNamespaces.size());
+    QVariantMap::const_iterator i = rootNamespaces.constBegin();
+    RootNamespaces rootNs;
+    rootNs.reserve(rootNamespaces.size());
 
-        while (i != rootNamespaces.constEnd()) {
-          rootNs.append(QPair<QByteArray, ulong>(i.key().toUtf8(),
-                                                 (ulong)i.value().toDouble()));
-          ++i;
-        }
+    while (i != rootNamespaces.constEnd()) {
+      rootNs.append(QPair<QByteArray, ulong>(i.key().toUtf8(),
+                                             (ulong)i.value().toDouble()));
+      ++i;
+    }
 
-        RootKeys keys;
-        keys.reserve(rootKeys.size());
+    RootKeys keys;
+    keys.reserve(rootKeys.size());
 
-        foreach (QString key, rootKeys) { keys.append(key.toUtf8()); }
+    foreach (QString key, rootKeys) { keys.append(key.toUtf8()); }
 
-        qDebug() << "ns items is loaded via lua script";
-
-        callback(NamespaceItems(rootNs, keys), QString());
-      });
+    callback(NamespaceItems(rootNs, keys), QString());
+  });
 
   runCommand(evalCmd);
 }
@@ -498,39 +500,47 @@ void RedisClient::Connection::processScanCommand(
 void RedisClient::Connection::changeCurrentDbNumber(int db) {
   if (m_dbNumberMutex.tryLock(5000)) {
     m_dbNumber = db;
-    qDebug() << "DB was selected:" << db;
     m_dbNumberMutex.unlock();
   } else {
     qWarning() << "Cannot lock db number mutex!";
   }
 }
 
-bool RedisClient::Connection::clusterConnectToNextMasterNode() {
+void RedisClient::Connection::clusterConnectToNextMasterNode(
+    std::function<void(const QString &err)> callback) {
   if (!hasNotVisitedClusterNodes()) {
-    return false;
+    return;
   }
 
   Host h = m_notVisitedMasterNodes->first();
   m_notVisitedMasterNodes->removeFirst();
 
-  SignalWaiter waiter(m_config.connectionTimeout());
-  waiter.addSuccessSignal(m_transporter.data(),
-                          &RedisClient::AbstractTransporter::connected);
-  waiter.addAbortSignal(m_transporter.data(),
-                        &RedisClient::AbstractTransporter::errorOccurred);
-  waiter.addAbortSignal(this, &Connection::shutdownStart);
+  callAfterConnect(callback);
 
   if (m_config.overrideClusterHost()) {
     reconnectTo(h.first, h.second);
   } else {
     reconnectTo(m_config.host(), h.second);
   }
-
-  return waiter.wait();
 }
 
 bool RedisClient::Connection::hasNotVisitedClusterNodes() const {
   return m_notVisitedMasterNodes && m_notVisitedMasterNodes->size() > 0;
+}
+
+void RedisClient::Connection::callAfterConnect(
+    std::function<void(const QString &err)> callback) {
+  auto context = new QObject();
+
+  QObject::connect(this, &Connection::authOk, context, [callback, context]() {
+    callback(QString());
+    context->deleteLater();
+  });
+  QObject::connect(this, &Connection::error, context,
+                   [callback, context](const QString &err) {
+                     callback(err);
+                     context->deleteLater();
+                   });
 }
 
 RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
@@ -749,5 +759,6 @@ QVariantMap RedisClient::ServerInfo::ParsedServerInfo::toVariantMap() {
   return categories;
 }
 
-RedisClient::Connection::SSHSupportException::SSHSupportException(const QString &e)
+RedisClient::Connection::SSHSupportException::SSHSupportException(
+    const QString &e)
     : Connection::Exception(e) {}
