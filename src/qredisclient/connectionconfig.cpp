@@ -132,14 +132,6 @@ void RedisClient::ConnectionConfig::setSslLocalCertPath(QString path)
     setParam<QString>("ssl_local_cert_path", path);
 }
 
-void RedisClient::ConnectionConfig::setSslSettigns(QString sslCaCertPath, QString sslPrivateKeyPath, QString sslLocalCertPath)
-{
-    setParam<bool>("ssl", true);
-    setParam<QString>("ssl_ca_cert_path", sslCaCertPath);
-    setParam<QString>("ssl_private_key_path", sslPrivateKeyPath);
-    setParam<QString>("ssl_local_cert_path", sslLocalCertPath);
-}
-
 bool RedisClient::ConnectionConfig::isSshPasswordUsed() const
 {
     return !param<QString>("ssh_password").isEmpty();
@@ -168,19 +160,6 @@ uint RedisClient::ConnectionConfig::sshPort() const
 QVariantHash RedisClient::ConnectionConfig::getInternalParameters() const
 {
     return m_parameters;
-}
-
-void RedisClient::ConnectionConfig::setSshTunnelSettings(QString host,
-                                                         QString user, QString pass,
-                                                         uint port,
-                                                         QString sshPrivatekeyPath, QString sshPublickeyPath)
-{
-    m_parameters.insert("ssh_host", host);
-    m_parameters.insert("ssh_user", user);
-    m_parameters.insert("ssh_password", pass);
-    m_parameters.insert("ssh_port", port);
-    m_parameters.insert("ssh_private_key_path", sshPrivatekeyPath);
-    m_parameters.insert("ssh_public_key_path", sshPublickeyPath);
 }
 
 bool RedisClient::ConnectionConfig::overrideClusterHost() const
