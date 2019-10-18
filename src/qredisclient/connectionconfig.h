@@ -1,9 +1,9 @@
 #pragma once
-#include <QString>
-#include <QList>
-#include <QVariantHash>
 #include <QJsonObject>
+#include <QList>
 #include <QSslCertificate>
+#include <QString>
+#include <QVariantHash>
 
 namespace RedisClient {
 
@@ -13,151 +13,136 @@ class Connection;
  * @brief The ConnectionConfig class
  * Supports loading settigns from JSON objects
  */
-class ConnectionConfig
-{
-public:
-    static const uint DEFAULT_REDIS_PORT = 6379;
-    static const uint DEFAULT_SSH_PORT = 22;
-    static const uint DEFAULT_TIMEOUT_IN_MS = 60000;
+class ConnectionConfig {
+ public:
+  static const uint DEFAULT_REDIS_PORT = 6379;
+  static const uint DEFAULT_SSH_PORT = 22;
+  static const uint DEFAULT_TIMEOUT_IN_MS = 60000;
 
-public:
-    /**
-     * @brief Default constructor for local connections
-     * @param host
-     * @param name
-     * @param port
-     */
-    ConnectionConfig(const QString & host = "", const QString & auth = "",
-                     const uint port = DEFAULT_REDIS_PORT, const QString & name = "");
-    ConnectionConfig & operator = (const ConnectionConfig & other);
-    ConnectionConfig(const QVariantHash& options);
+ public:
+  /**
+   * @brief Default constructor for local connections
+   * @param host
+   * @param name
+   * @param port
+   */
+  ConnectionConfig(const QString& host = "", const QString& auth = "",
+                   const uint port = DEFAULT_REDIS_PORT,
+                   const QString& name = "");
+  ConnectionConfig& operator=(const ConnectionConfig& other);
+  ConnectionConfig(const QVariantHash& options);
 
-    QString name() const;
-    QString host() const;
-    QString auth() const;
-    uint port() const;
+  virtual ~ConnectionConfig() {}
 
-    void setName(QString name);
-    void setAuth(QString auth);
-    void setHost(QString host);
-    void setPort(uint port);
+  QString name() const;
+  QString host() const;
+  QString auth() const;
+  uint port() const;
 
-    bool isNull() const;
-    bool useAuth() const;
-    bool isValid() const;
+  void setName(QString name);
+  void setAuth(QString auth);
+  void setHost(QString host);
+  void setPort(uint port);
 
-    /*
-     * Timeouts in ms
-     */
-    uint executeTimeout() const;
-    uint connectionTimeout() const;
+  bool isNull() const;
+  bool useAuth() const;
+  bool isValid() const;
 
-    void setExecutionTimeout(uint timeout);
-    void setConnectionTimeout(uint timeout);
-    void setTimeouts(uint connectionTimeout, uint commandExecutionTimeout);
+  /*
+   * Timeouts in ms
+   */
+  uint executeTimeout() const;
+  uint connectionTimeout() const;
 
-    /*
-     * SSL settings
-     * NOTE: SSL over SSH tunnel is not supported!
-     */
-    bool useSsl() const;
-    void setSsl(bool enabled);
-    QList<QSslCertificate> sslCaCertificates() const;
-    QString sslCaCertPath() const;
-    QString sslPrivateKeyPath() const;
-    QString sslLocalCertPath() const;
+  void setExecutionTimeout(uint timeout);
+  void setConnectionTimeout(uint timeout);
+  void setTimeouts(uint connectionTimeout, uint commandExecutionTimeout);
 
-    void setSslCaCertPath(QString path);
-    void setSslPrivateKeyPath(QString path);
-    void setSslLocalCertPath(QString path);
-    void setSslSettigns(QString sslCaCertPath,
-                        QString sslPrivateKeyPath = "",
-                        QString sslLocalCertPath = "");
+  /*
+   * SSL settings
+   */
+  virtual bool useSsl() const;
+  virtual void setSsl(bool enabled);
+  virtual QList<QSslCertificate> sslCaCertificates() const;
+  virtual QString sslCaCertPath() const;
+  virtual QString sslPrivateKeyPath() const;
+  virtual QString sslLocalCertPath() const;
 
-    /*
-     * SSH Tunnel settings
-     */
-    bool useSshTunnel() const;
-    bool isSshPasswordUsed() const;
-    QString sshPassword() const;
-    QString sshUser() const;
-    QString sshHost() const;
-    uint sshPort() const;
+  virtual void setSslCaCertPath(QString path);
+  virtual void setSslPrivateKeyPath(QString path);
+  virtual void setSslLocalCertPath(QString path);
 
-    /**
-     * @brief getSshPrivateKey from specified path
-     * @return QString with ssh key
-     */
-    QString getSshPrivateKey() const;
-    QString getSshPrivateKeyPath() const;
+  /*
+   * SSH Tunnel settings
+   */
+  virtual bool useSshTunnel() const;
+  virtual bool isSshPasswordUsed() const;
+  virtual QString sshPassword() const;
+  virtual QString sshUser() const;
+  virtual QString sshHost() const;
+  virtual uint sshPort() const;
 
-    /**
-     * @brief getSshPublicKey from specified path
-     * @return QString with ssh key
-     */
-    QString getSshPublicKey() const;
-    QString getSshPublicKeyPath() const;
+  /**
+   * @brief getSshPrivateKey from specified path
+   * @return QString with ssh key
+   */
+  virtual QString getSshPrivateKey() const;
+  virtual QString getSshPrivateKeyPath() const;
 
-    void setSshPassword(QString pass);
-    void setSshHost(QString host);
-    void setSshPrivateKeyPath(QString path);
-    void setSshUser(QString user);
-    void setSshPort(uint port);
+  /**
+   * @brief getSshPublicKey from specified path
+   * @return QString with ssh key
+   */
+  virtual QString getSshPublicKey() const;
+  virtual QString getSshPublicKeyPath() const;
 
-    /**
-     * @brief setSshTunnelSettings - Set SSH settings
-     * @param host
-     * @param user
-     * @param pass
-     * @param port
-     * @param sshPrivatekeyPath
-     */
-    void setSshTunnelSettings(QString host, QString user, QString pass,
-                              uint port = DEFAULT_SSH_PORT,
-                              QString sshPrivatekeyPath = "",
-                              QString sshPublickeyPath = "");
+  virtual void setSshPassword(QString pass);
+  virtual void setSshHost(QString host);
+  virtual void setSshPrivateKeyPath(QString path);
+  virtual void setSshUser(QString user);
+  virtual void setSshPort(uint port);
 
-    /*
-     * Cluster settings
-     */
-    bool overrideClusterHost() const;
-    void setClusterHostOverride(bool v);
+  /*
+   * Cluster settings
+   */
+  bool overrideClusterHost() const;
+  void setClusterHostOverride(bool v);
 
-    /*
-     * Convert config to JSON
-     */
-    QJsonObject toJsonObject();
-    static ConnectionConfig fromJsonObject(const QJsonObject& config);
+  /*
+   * Convert config to JSON
+   */
+  QJsonObject toJsonObject();
+  static ConnectionConfig fromJsonObject(const QJsonObject& config);
 
-    /*
-     * Following methods used internally in Connection class
-     */
-    QWeakPointer<Connection> getOwner() const;
-    void setOwner(QWeakPointer<Connection>);
+  /*
+   * Following methods used internally in Connection class
+   */
+  QWeakPointer<Connection> getOwner() const;
+  void setOwner(QWeakPointer<Connection>);
 
-    QVariantHash getInternalParameters() const;
+  QVariantHash getInternalParameters() const;
 
-protected:
-    /*
-      * Extension API
-      * Use following methods to implement custom wrappers
-      * around ConnectionConfig class
-      */
-    template <class T> inline T param(const QString& p, T default_value=T()) const
-    {
-        if (m_parameters.contains(p)) return m_parameters[p].value<T>();
-        return default_value;
-    }
+ protected:
+  /*
+   * Extension API
+   * Use following methods to implement custom wrappers
+   * around ConnectionConfig class
+   */
+  template <class T>
+  inline T param(const QString& p, T default_value = T()) const {
+    if (m_parameters.contains(p)) return m_parameters[p].value<T>();
+    return default_value;
+  }
 
-    template <class T> inline void setParam(const QString& key, T p)
-    {
-        m_parameters.insert(key, p);
-    }
+  template <class T>
+  inline void setParam(const QString& key, T p) {
+    m_parameters.insert(key, p);
+  }
 
-    QString getValidPathFromParameter(const QString& param) const;
+  QString getValidPathFromParameter(const QString& param) const;
 
-protected:
-    QWeakPointer<Connection> m_owner;
-    QVariantHash m_parameters;
+ protected:
+  QWeakPointer<Connection> m_owner;
+  QVariantHash m_parameters;
 };
-}
+}  // namespace RedisClient
