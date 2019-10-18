@@ -83,17 +83,15 @@ class ConnectionConfig {
   virtual uint sshPort() const;
 
   /**
-   * @brief getSshPrivateKey from specified path
+   * @brief getSshPrivateKeyPath from specified path
    * @return QString with ssh key
    */
-  virtual QString getSshPrivateKey() const;
   virtual QString getSshPrivateKeyPath() const;
 
   /**
-   * @brief getSshPublicKey from specified path
+   * @brief getSshPublicKeyPath from specified path
    * @return QString with ssh key
    */
-  virtual QString getSshPublicKey() const;
   virtual QString getSshPublicKeyPath() const;
 
   virtual void setSshPassword(QString pass);
@@ -139,7 +137,7 @@ class ConnectionConfig {
     m_parameters.insert(key, p);
   }
 
-  QString getValidPathFromParameter(const QString& param) const;
+  virtual QString getValidPathFromParameter(const QString& param) const;
 
  protected:
   QWeakPointer<Connection> m_owner;

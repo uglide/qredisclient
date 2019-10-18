@@ -219,19 +219,9 @@ QWeakPointer<RedisClient::Connection> RedisClient::ConnectionConfig::getOwner() 
     return m_owner;
 }
 
-QString RedisClient::ConnectionConfig::getSshPrivateKey() const
-{
-    return getValidPathFromParameter("ssh_private_key_path");
-}
-
 QString RedisClient::ConnectionConfig::getSshPrivateKeyPath() const
 {
     return param<QString>("ssh_private_key_path");
-}
-
-QString RedisClient::ConnectionConfig::getSshPublicKey() const
-{
-    return getValidPathFromParameter("ssh_public_key_path");
 }
 
 QString RedisClient::ConnectionConfig::getSshPublicKeyPath() const
