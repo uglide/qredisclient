@@ -163,9 +163,19 @@ void RedisClient::DefaultTransporter::sslError(const QList<QSslError> &errors) {
     return;
   }
 
-  m_errorOccurred = true;
+  QString allErrors;
+
   for (QSslError err : errors)
-    emit errorOccurred(QString("SSL error: %1").arg(err.errorString()));
+      allErrors.append(QString("SSL error: %1\n").arg(err.errorString()));
+
+  if (m_connection->getConfig().ignoreAllSslErrors()) {
+      m_socket->ignoreSslErrors();
+      emit logEvent(QString("SSL: Ignoring SSL errors:\n %1").arg(allErrors));
+      return;
+  }
+
+  m_errorOccurred = true;
+  emit errorOccurred(QString("SSL errors:\n %1").arg(allErrors));
 }
 
 void RedisClient::DefaultTransporter::reconnect() {

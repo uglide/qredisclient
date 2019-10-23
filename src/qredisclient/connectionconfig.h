@@ -67,10 +67,12 @@ class ConnectionConfig {
   virtual QString sslCaCertPath() const;
   virtual QString sslPrivateKeyPath() const;
   virtual QString sslLocalCertPath() const;
+  bool ignoreAllSslErrors() const;
 
   virtual void setSslCaCertPath(QString path);
   virtual void setSslPrivateKeyPath(QString path);
   virtual void setSslLocalCertPath(QString path);
+  void setIgnoreAllSslErrors(bool v);
 
   /*
    * SSH Tunnel settings

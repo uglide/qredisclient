@@ -117,6 +117,11 @@ QString RedisClient::ConnectionConfig::sslLocalCertPath() const
     return getValidPathFromParameter("ssl_local_cert_path");
 }
 
+bool RedisClient::ConnectionConfig::ignoreAllSslErrors() const
+{
+    return param<bool>("ssl_ignore_all_errors", false);
+}
+
 void RedisClient::ConnectionConfig::setSslCaCertPath(QString path)
 {
     setParam<QString>("ssl_ca_cert_path", path);
@@ -130,6 +135,11 @@ void RedisClient::ConnectionConfig::setSslPrivateKeyPath(QString path)
 void RedisClient::ConnectionConfig::setSslLocalCertPath(QString path)
 {
     setParam<QString>("ssl_local_cert_path", path);
+}
+
+void RedisClient::ConnectionConfig::setIgnoreAllSslErrors(bool v)
+{
+    m_parameters.insert("ssl_ignore_all_errors", v);
 }
 
 bool RedisClient::ConnectionConfig::isSshPasswordUsed() const
