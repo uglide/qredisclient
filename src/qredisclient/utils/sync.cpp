@@ -7,6 +7,10 @@ RedisClient::SignalWaiter::SignalWaiter(uint timeout)
   m_timeoutTimer.setInterval(timeout);
 
   connect(&m_timeoutTimer, SIGNAL(timeout()), &m_loop, SLOT(quit()));
+  if (QCoreApplication::instance()) {
+    connect(QCoreApplication::instance(),
+            SIGNAL(aboutToQuit()), this, SLOT(abort()));
+  }
 }
 
 bool RedisClient::SignalWaiter::wait() {

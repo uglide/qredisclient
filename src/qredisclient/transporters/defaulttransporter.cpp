@@ -10,7 +10,9 @@ RedisClient::DefaultTransporter::DefaultTransporter(RedisClient::Connection *c)
       m_socket(nullptr),
       m_errorOccurred(false) {}
 
-RedisClient::DefaultTransporter::~DefaultTransporter() {}
+RedisClient::DefaultTransporter::~DefaultTransporter() {
+    disconnectFromHost();
+}
 
 void RedisClient::DefaultTransporter::initSocket() {
   using namespace RedisClient;
@@ -97,15 +99,25 @@ bool RedisClient::DefaultTransporter::connectToHost() {
       m_socket->setLocalCertificate(localCert);
     }
 
-    m_socket->connectToHostEncrypted(conf.host(), conf.port());
-    connectionResult = m_socket->waitForEncrypted(conf.connectionTimeout());
+    SignalWaiter socketWaiter(conf.connectionTimeout());
+    socketWaiter.addAbortSignal(
+        m_socket.data(),
+        static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(
+            &QAbstractSocket::error));
+    socketWaiter.addAbortSignal(m_connection, &RedisClient::Connection::shutdownStart);
+    socketWaiter.addAbortSignal(m_socket.data(),
+                                &QAbstractSocket::disconnected);
+    socketWaiter.addSuccessSignal(m_socket.data(), &QSslSocket::encrypted);
 
+    m_socket->connectToHostEncrypted(conf.host(), conf.port());
+    connectionResult = socketWaiter.wait();
   } else {
     SignalWaiter socketWaiter(conf.connectionTimeout());
     socketWaiter.addAbortSignal(
         m_socket.data(),
         static_cast<void (QAbstractSocket::*)(QAbstractSocket::SocketError)>(
             &QAbstractSocket::error));
+    socketWaiter.addAbortSignal(this, &QObject::destroyed);
     socketWaiter.addAbortSignal(m_socket.data(),
                                 &QAbstractSocket::disconnected);
     socketWaiter.addSuccessSignal(m_socket.data(), &QAbstractSocket::connected);
