@@ -93,6 +93,11 @@ void RedisClient::Connection::disconnect() {
   m_dbNumber = 0;
 }
 
+void RedisClient::Connection::disableAutoConnect()
+{
+    m_autoConnect = false;
+}
+
 QFuture<RedisClient::Response> RedisClient::Connection::command(
     const RedisClient::Command &cmd) {
   try {

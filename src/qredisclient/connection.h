@@ -97,6 +97,11 @@ class Connection : public QObject {
   virtual void disconnect();
 
   /**
+   * @brief disableAutoConnect
+   */
+  virtual void disableAutoConnect();
+
+  /**
    * @brief getConfig
    * @return
    */
