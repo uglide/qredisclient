@@ -1,6 +1,8 @@
 #include "connectionconfig.h"
 #include "qredisclient/utils/compat.h"
 #include <QFile>
+#include <QJsonDocument>
+#include <QCryptographicHash>
 
 RedisClient::ConnectionConfig::ConnectionConfig(const QString &host, const QString &auth, const uint port, const QString &name)
 {
@@ -25,6 +27,13 @@ RedisClient::ConnectionConfig &RedisClient::ConnectionConfig::operator =(const C
 RedisClient::ConnectionConfig::ConnectionConfig(const QVariantHash &options)
     : m_parameters(options)
 {
+}
+
+QByteArray RedisClient::ConnectionConfig::id() const
+{
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    hash.addData(QJsonDocument(toJsonObject()).toJson(QJsonDocument::Compact));
+    return hash.result();
 }
 
 QString RedisClient::ConnectionConfig::name() const
@@ -271,7 +280,7 @@ RedisClient::ConnectionConfig RedisClient::ConnectionConfig::fromJsonObject(cons
     return c;
 }
 
-QJsonObject RedisClient::ConnectionConfig::toJsonObject()
+QJsonObject RedisClient::ConnectionConfig::toJsonObject() const
 {
     return QJsonObjectFromVariantHash(m_parameters);
 }

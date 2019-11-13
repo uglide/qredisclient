@@ -34,6 +34,8 @@ class ConnectionConfig {
 
   virtual ~ConnectionConfig() {}
 
+  QByteArray id() const;
+
   QString name() const;
   QString host() const;
   QString auth() const;
@@ -111,7 +113,7 @@ class ConnectionConfig {
   /*
    * Convert config to JSON
    */
-  QJsonObject toJsonObject();
+  QJsonObject toJsonObject() const;
   static ConnectionConfig fromJsonObject(const QJsonObject& config);
 
   /*
