@@ -66,7 +66,7 @@ class AbstractTransporter : public QObject {
     QSharedPointer<ResponseEmitter> emitter;
   };
 
-  void reAddRunningCommandToQueue(QObject* ignoreOwner = nullptr);
+  void reAddRunningCommandToQueue();
 
  private:
   void logResponse(const Response& response);

@@ -155,10 +155,13 @@ void RedisClient::DefaultTransporter::sendCommand(const QByteArray &cmd) {
 
 void RedisClient::DefaultTransporter::error(
     QAbstractSocket::SocketError error) {
-  if (error == QAbstractSocket::UnknownSocketError && connectToHost() &&
+  if (error == QAbstractSocket::UnknownSocketError &&
       m_runningCommands.size() > 0) {
-    reAddRunningCommandToQueue();
-    return processCommandQueue();
+
+      if (isSocketReconnectRequired()) {
+        reAddRunningCommandToQueue();
+        return processCommandQueue();
+      }
   }
 
   m_errorOccurred = true;

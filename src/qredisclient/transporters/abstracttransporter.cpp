@@ -55,7 +55,14 @@ void RedisClient::AbstractTransporter::addCommand(const Command &cmd) {
 void RedisClient::AbstractTransporter::cancelCommands(QObject *owner) {
   if (!owner) return;
 
-  reAddRunningCommandToQueue(owner);
+  // Cancel running commands
+  for (auto curr = m_runningCommands.begin(); curr != m_runningCommands.end();) {
+    if ((*curr)->cmd.getOwner() == owner) {
+      curr = m_runningCommands.erase(curr);
+    } else {
+      ++curr;
+    }
+  }
 
   // Remove subscriptions
   Subscriptions::iterator i = m_subscriptions.begin();
@@ -146,21 +153,13 @@ void RedisClient::AbstractTransporter::resetDbIndex() {
   m_connection->changeCurrentDbNumber(0);
 }
 
-void RedisClient::AbstractTransporter::reAddRunningCommandToQueue(
-    QObject *ignoreOwner) {
-  for (auto curr = m_runningCommands.end();
-       curr != m_runningCommands.begin();) {
-    --curr;
-
-    auto rCmd = *curr;
-    if (ignoreOwner == nullptr || rCmd->cmd.getOwner() != ignoreOwner) {
-      m_commands.prepend(rCmd->cmd);
-      qDebug() << "Running command was re-added to queue";
-      emit logEvent("Running command was re-added to queue.");
-    }
-
+void RedisClient::AbstractTransporter::reAddRunningCommandToQueue() {
+  for (auto curr = m_runningCommands.begin(); curr != m_runningCommands.end();) {
+    m_commands.prepend((*curr)->cmd);
     curr = m_runningCommands.erase(curr);
   }
+  qDebug() << "Running commands were re-added to queue";
+  emit logEvent("Running commands were re-added to queue.");
 }
 
 void RedisClient::AbstractTransporter::cancelRunningCommands() {
