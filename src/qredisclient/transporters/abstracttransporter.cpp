@@ -286,10 +286,10 @@ void RedisClient::AbstractTransporter::runCommand(
     const RedisClient::Command &command) {
   if (isSocketReconnectRequired()) {
     if (!m_reconnectEnabled) {
-      qDebug() << "Connection disconnected on error. Ignoring commands.";
+      emit errorOccurred("Cannot run command. Reconnect is required.");
       return;
     }
-    qDebug() << "Cannot run command. Reconnect is required.";
+    qDebug() << "Reconnecting";
     m_commands.enqueue(command);
     reconnect();
     return;
