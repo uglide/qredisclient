@@ -358,6 +358,8 @@ class Connection : public QObject {
 
   void callAfterConnect(std::function<void(const QString& err)> callback);
 
+  void sentinelConnectToMaster();
+
  protected slots:
   void auth();
 
