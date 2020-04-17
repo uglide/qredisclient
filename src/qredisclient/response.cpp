@@ -135,10 +135,15 @@ bool RedisClient::Response::isErrorMessage() const {
 }
 
 bool RedisClient::Response::isErrorStateMessage() const {
-  return m_type == Type::Error &&
+  return isErrorMessage() &&
          (m_result.toByteArray().startsWith("DENIED") ||
           m_result.toByteArray().startsWith("LOADING") ||
           m_result.toByteArray().startsWith("MISCONF"));
+}
+
+bool RedisClient::Response::isProtocolErrorMessage() const
+{
+    return isErrorMessage() && m_result.toByteArray().toLower().contains("protocol error");
 }
 
 bool RedisClient::Response::isDisabledCommandErrorMessage() const {

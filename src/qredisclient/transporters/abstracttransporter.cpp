@@ -1,5 +1,6 @@
 #include "abstracttransporter.h"
 #include <QDebug>
+#include <QDateTime>
 #include "qredisclient/connection.h"
 #include "qredisclient/private/responseemmiter.h"
 #include "qredisclient/utils/text.h"
@@ -118,6 +119,12 @@ void RedisClient::AbstractTransporter::sendResponse(
 
   auto runningCommand = m_runningCommands.dequeue();
 
+  // Re-try on protocol errors
+  if (response.isProtocolErrorMessage()) {
+      m_commands.prepend(runningCommand->cmd);
+      return;
+  }
+
   // Reconnect to different server in cluster and reissue current
   // command if needed
   if (m_connection->mode() == Connection::Mode::Cluster &&
@@ -154,15 +161,21 @@ void RedisClient::AbstractTransporter::resetDbIndex() {
 }
 
 void RedisClient::AbstractTransporter::reAddRunningCommandToQueue() {
-  for (auto curr = m_runningCommands.begin(); curr != m_runningCommands.end();) {
-    m_commands.prepend((*curr)->cmd);
-    curr = m_runningCommands.erase(curr);
+  qDebug() << "Running commands: " << m_runningCommands.size();
+
+  for (auto curr : m_runningCommands) {
+    m_commands.prepend(curr->cmd);
   }
+  m_runningCommands.clear();
+
   qDebug() << "Running commands were re-added to queue";
   emit logEvent("Running commands were re-added to queue.");
 }
 
 void RedisClient::AbstractTransporter::cancelRunningCommands() {
+  if (m_runningCommands.size() == 0)
+    return;
+
   emit logEvent("Cancel running commands");
   m_runningCommands.clear();
 }
@@ -265,6 +278,7 @@ void RedisClient::AbstractTransporter::readyRead() {
 
   if (!m_parser.feedBuffer(readFromSocket())) {
     // TODO: reset???!
+    qDebug() << "Cannot feed parsing buffer";
     return;
   }
 
@@ -289,8 +303,7 @@ void RedisClient::AbstractTransporter::runCommand(
       emit errorOccurred("Cannot run command. Reconnect is required.");
       return;
     }
-    qDebug() << "Reconnecting";
-    m_commands.enqueue(command);
+    m_commands.prepend(command);
     reconnect();
     return;
   }
@@ -309,7 +322,7 @@ void RedisClient::AbstractTransporter::runCommand(
 
 RedisClient::AbstractTransporter::RunningCommand::RunningCommand(
     const RedisClient::Command &cmd)
-    : cmd(cmd), emitter(nullptr) {
+    : cmd(cmd), emitter(nullptr), sentAt(QDateTime::currentMSecsSinceEpoch()) {
   auto callback = cmd.getCallBack();
   auto owner = cmd.getOwner();
   if (callback && owner) {

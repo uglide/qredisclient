@@ -30,6 +30,7 @@ class Response {
   bool isEmpty() const;
   bool isErrorMessage() const;
   bool isErrorStateMessage() const;
+  bool isProtocolErrorMessage() const;
   bool isDisabledCommandErrorMessage() const;
   bool isOkMessage() const;
   bool isQueuedMessage() const;
