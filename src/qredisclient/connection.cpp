@@ -190,11 +190,12 @@ bool RedisClient::Connection::waitForIdle(uint timeout) {
   return waiter.wait();
 }
 
-QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone() const {
+QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone(bool copyServerInfo) const {
   auto newConnection = QSharedPointer<RedisClient::Connection>(
       new RedisClient::Connection(getConfig()));
 
-  newConnection->m_serverInfo = m_serverInfo;
+  if (copyServerInfo)
+    newConnection->m_serverInfo = m_serverInfo;
 
   return newConnection;
 }
