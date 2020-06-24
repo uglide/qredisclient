@@ -197,6 +197,8 @@ QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone(bool copy
   if (copyServerInfo)
     newConnection->m_serverInfo = m_serverInfo;
 
+  newConnection->m_currentMode = m_currentMode;
+
   return newConnection;
 }
 
