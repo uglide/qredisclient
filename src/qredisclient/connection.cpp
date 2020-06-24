@@ -587,10 +587,8 @@ void RedisClient::Connection::sentinelConnectToMaster() {
 }
 
 RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
-  HostList result;
-
   if (mode() != Mode::Cluster) {
-    return result;
+    return HostList();
   }
 
   Response r;
@@ -599,10 +597,12 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
     r = internalCommandSync({"CLUSTER", "SLOTS"});
   } catch (const Exception &e) {
     emit error(QString("Cannot retrive nodes list").arg(e.what()));
-    return result;
+    return HostList();
   }
 
   QVariantList slotsList = r.value().toList();
+
+  QSet<Host> masterNodes;
 
   foreach (QVariant clusterSlot, slotsList) {
     QVariantList details = clusterSlot.toList();
@@ -611,10 +611,10 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
 
     QVariantList masterDetails = details[2].toList();
 
-    result.append({masterDetails[0].toString(), masterDetails[1].toInt()});
+    masterNodes.insert({masterDetails[0].toString(), masterDetails[1].toInt()});
   }
 
-  return result;
+  return masterNodes.values();
 }
 
 QFuture<bool> RedisClient::Connection::isCommandSupported(
