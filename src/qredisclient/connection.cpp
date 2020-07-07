@@ -1,4 +1,5 @@
 #include "connection.h"
+
 #include <QDebug>
 #include <QDir>
 #include <QJsonDocument>
@@ -84,6 +85,13 @@ void RedisClient::Connection::disconnect() {
   emit shutdownStart();
   if (isTransporterRunning()) {
     m_stoppingTransporter = true;
+
+    if (m_blockingOp.tryLock(10000)) {
+      m_blockingOp.unlock();
+    } else {
+      qWarning() << "Blocking operation is still in progress";
+    }
+
     m_transporterThread->quit();
     m_transporterThread->wait();
     m_transporter.clear();
@@ -93,10 +101,7 @@ void RedisClient::Connection::disconnect() {
   m_dbNumber = 0;
 }
 
-void RedisClient::Connection::disableAutoConnect()
-{
-    m_autoConnect = false;
-}
+void RedisClient::Connection::disableAutoConnect() { m_autoConnect = false; }
 
 QFuture<RedisClient::Response> RedisClient::Connection::command(
     const RedisClient::Command &cmd) {
@@ -127,6 +132,54 @@ QFuture<RedisClient::Response> RedisClient::Connection::command(
     return this->runCommand(cmd);
   } catch (RedisClient::Connection::Exception &e) {
     throw Exception("Cannot execute command." + QString(e.what()));
+  }
+}
+
+void RedisClient::Connection::pipelinedCmd(
+    QList<QList<QByteArray>> rawCmds, QObject *owner, int db,
+    std::function<void(const RedisClient::Response &, QString)> callback) {
+  QMutexLocker l(&m_blockingOp);
+
+  int limit = 100;
+
+  if (m_transporter) {
+    limit = m_transporter->pipelineCommandsLimit();
+  }
+
+  if (mode() == Mode::Cluster) {
+    QHash<Host, Command> mappedCommands;
+    QList<Command> pendingCommands;
+
+    for (QList<QByteArray> rawCmd : rawCmds) {
+      if (m_stoppingTransporter) return;
+
+      Command cmd(rawCmd);
+      cmd.setCallBack(owner, callback);
+      Connection::Host cmdHost = getClusterHost(cmd);
+
+      if (mappedCommands.contains(cmdHost)) {
+        mappedCommands[cmdHost].addToPipeline(rawCmd);
+
+        if (mappedCommands[cmdHost].length() >= limit) {
+          pendingCommands.append(mappedCommands[cmdHost]);
+          mappedCommands.remove(cmdHost);
+        }
+      } else {
+        mappedCommands[cmdHost] = cmd;
+      }
+    }
+    runCommands(pendingCommands);
+    runCommands(mappedCommands.values());
+  } else {
+    RedisClient::Command cmd({}, db);
+    cmd.setCallBack(owner, callback);
+
+    for (QList<QByteArray> rawCmd : rawCmds) {
+      if (m_stoppingTransporter) return;
+
+      cmd.addToPipeline(rawCmd);
+    }
+    runCommand(cmd);
   }
 }
 
@@ -166,7 +219,7 @@ QFuture<RedisClient::Response> RedisClient::Connection::runCommand(
 
       return d->future();
     } else {
-      throw Exception("Try run command in not connected state");
+      throw Exception("Cannot run command in not connected state");
     }
   }
 
@@ -178,9 +231,34 @@ QFuture<RedisClient::Response> RedisClient::Connection::runCommand(
 
   auto deferred = cmd.getDeferred();
 
-  emit addCommandToWorker(cmd);
+  emit addCommandsToWorker({cmd});
 
   return deferred.future();
+}
+
+void RedisClient::Connection::runCommands(const QList<Command> &commands) {
+  if (!isConnected()) {
+    if (m_autoConnect) {
+      callAfterConnect([this, commands](const QString &err) {
+        if (err.isEmpty()) {
+          runCommands(commands);
+        }
+      });
+      connect(false);
+      return;
+    } else {
+      throw Exception("Cannot run command in not connected state");
+    }
+  }
+
+  for (auto cmd : commands) {
+    if (cmd.getOwner() && cmd.getOwner() != this)
+      QObject::connect(cmd.getOwner(), SIGNAL(destroyed(QObject *)),
+                       m_transporter.data(), SLOT(cancelCommands(QObject *)),
+                       static_cast<Qt::ConnectionType>(Qt::QueuedConnection |
+                                                       Qt::UniqueConnection));
+  }
+  emit addCommandsToWorker(commands);
 }
 
 bool RedisClient::Connection::waitForIdle(uint timeout) {
@@ -190,14 +268,15 @@ bool RedisClient::Connection::waitForIdle(uint timeout) {
   return waiter.wait();
 }
 
-QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone(bool copyServerInfo) const {
+QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone(
+    bool copyServerInfo) const {
   auto newConnection = QSharedPointer<RedisClient::Connection>(
       new RedisClient::Connection(getConfig()));
 
-  if (copyServerInfo)
-    newConnection->m_serverInfo = m_serverInfo;
+  if (copyServerInfo) newConnection->m_serverInfo = m_serverInfo;
 
   newConnection->m_currentMode = m_currentMode;
+  newConnection->m_clusterSlots = m_clusterSlots;
 
   return newConnection;
 }
@@ -552,7 +631,7 @@ void RedisClient::Connection::callAfterConnect(
                    [callback, context](const QString &err) {
                      callback(err);
                      context->deleteLater();
-  });
+                   });
 }
 
 void RedisClient::Connection::sentinelConnectToMaster() {
@@ -586,9 +665,9 @@ void RedisClient::Connection::sentinelConnectToMaster() {
   emit reconnectTo(host, masterInfo[5].toInt());
 }
 
-RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
+QVariantList RedisClient::Connection::executeClusterSlotsCommand() {
   if (mode() != Mode::Cluster) {
-    return HostList();
+    return QVariantList();
   }
 
   Response r;
@@ -597,10 +676,18 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
     r = internalCommandSync({"CLUSTER", "SLOTS"});
   } catch (const Exception &e) {
     emit error(QString("Cannot retrive nodes list").arg(e.what()));
-    return HostList();
+    return QVariantList();
   }
 
-  QVariantList slotsList = r.value().toList();
+  return r.value().toList();
+}
+
+RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
+  QVariantList slotsList = executeClusterSlotsCommand();
+
+  if (slotsList.size() == 0) {
+    return HostList();
+  }
 
   QSet<Host> masterNodes;
 
@@ -614,7 +701,51 @@ RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
     masterNodes.insert({masterDetails[0].toString(), masterDetails[1].toInt()});
   }
 
-  return masterNodes.values();
+  return masterNodes.toList();
+}
+
+RedisClient::Connection::ClusterSlots
+RedisClient::Connection::getClusterSlots() {
+  QVariantList slotsList = executeClusterSlotsCommand();
+
+  if (slotsList.size() == 0) {
+    return ClusterSlots();
+  }
+
+  ClusterSlots hashSlots;
+
+  foreach (QVariant clusterSlot, slotsList) {
+    QVariantList details = clusterSlot.toList();
+
+    if (details.size() < 3) continue;
+
+    QVariantList masterDetails = details[2].toList();
+
+    Range r{details[0].toInt(), details[1].toInt()};
+
+    hashSlots.insert(r,
+                     {masterDetails[0].toString(), masterDetails[1].toInt()});
+  }
+
+  return hashSlots;
+}
+
+RedisClient::Connection::Host RedisClient::Connection::getClusterHost(
+    const Command &cmd) {
+  if (m_clusterSlots.size() == 0) {
+    qWarning() << "cluster slots should be loaded first";
+    return Host(m_config.host(), m_config.port());
+  }
+
+  quint16 slot = cmd.getHashSlot();
+
+  for (auto slotRange : m_clusterSlots.keys()) {
+    if (slotRange.first <= slot && slot <= slotRange.second) {
+      return m_clusterSlots[slotRange];
+    }
+  }
+
+  return Host(m_config.host(), m_config.port());
 }
 
 QFuture<bool> RedisClient::Connection::isCommandSupported(
@@ -663,6 +794,7 @@ void RedisClient::Connection::auth() {
     // TODO(u_glide): add option to disable automatic mode switching
     if (m_serverInfo.clusterMode) {
       m_currentMode = Mode::Cluster;
+      m_clusterSlots = getClusterSlots();
       emit log("Cluster detected");
     } else if (m_serverInfo.sentinelMode) {
       m_currentMode = Mode::Sentinel;

@@ -17,7 +17,7 @@ class DummyConnection : public RedisClient::Connection {
         m_version(version),
         m_raiseExceptionOnConnect(raise_error) {}
 
-  QSharedPointer<RedisClient::Connection> clone() const override {
+  QSharedPointer<RedisClient::Connection> clone(bool copyServerInfo=true) const override {
     if (m_clone) {
       return m_clone;
     }

@@ -61,17 +61,17 @@ public:
    */
   Command& addToPipeline(const QList<QByteArray> cmd);
 
-    /**
-     * @brief length
-     * @return Number of command arguments
-     */
-    int length() const;
+  /**
+   * @brief length
+   * @return Number of command arguments
+   */
+  int length() const;
 
-    /**
-     * @brief Get command in RESP or Pipeline format
-     * @return QByteArray
-     */
-    QByteArray  getByteRepresentation() const;
+  /**
+   * @brief Get command in RESP or Pipeline format
+   * @return QByteArray
+   */
+  QByteArray  getByteRepresentation() const;
 
   /**
    * @brief Get source command as single string
@@ -90,7 +90,20 @@ public:
    * @param i
    * @return
    */
-  QString getPartAsString(int i) const;
+  QString getPartAsString(int i) const;  
+
+  /**
+   * @brief getKeyName
+   * @param cmd
+   * @return
+   */
+  QByteArray getKeyName() const;
+
+  /**
+   * @brief getHashSlot
+   * @return
+   */
+  qint16 getHashSlot() const;
 
   /**
    * @brief Get database index where this command should be executed
@@ -148,28 +161,28 @@ public:
    */
   bool isHiPriorityCommand() const;
 
-    /**
-     * @brief Enable/disable pipeline mode. Default is off.
-     * @param enable
-     */
-    void setPipelineCommand(const bool enable);
+  /**
+   * @brief Enable/disable pipeline mode. Default is off.
+   * @param enable
+   */
+  void setPipelineCommand(const bool enable);
 
-    /**
-     * @brief isValid
-     * @return
-     */
-    bool isValid() const;
-    bool isEmpty() const;
+  /**
+   * @brief isValid
+   * @return
+   */
+  bool isValid() const;
+  bool isEmpty() const;
 
-    /*
-     * Command type checks
-     */
-    bool isScanCommand() const;
-    bool isSelectCommand() const;
-    bool isSubscriptionCommand() const;
-    bool isUnSubscriptionCommand() const;
-    bool isAuthCommand() const;
-    bool isPipelineCommand() const;
+  /*
+   * Command type checks
+   */
+  bool isScanCommand() const;
+  bool isSelectCommand() const;
+  bool isSubscriptionCommand() const;
+  bool isUnSubscriptionCommand() const;
+  bool isAuthCommand() const;
+  bool isPipelineCommand() const;
 
 protected:
     /**
@@ -185,6 +198,8 @@ public:
    * @return Command parts as list.
    */
   static QList<QByteArray> splitCommandString(const QString&);
+
+  static quint16 calcKeyHashSlot(const QByteArray& key);
 
 protected:
     QObject * m_owner;

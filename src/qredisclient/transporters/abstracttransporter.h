@@ -25,6 +25,8 @@ class AbstractTransporter : public QObject {
   AbstractTransporter(Connection* c);  // TODO: replace raw pointer by WeakPtr
   virtual ~AbstractTransporter();
 
+  virtual int pipelineCommandsLimit() const;
+
  signals:
   void errorOccurred(const QString&);
   void logEvent(const QString&);
@@ -35,7 +37,7 @@ class AbstractTransporter : public QObject {
  public slots:
   virtual void init();
   virtual void disconnectFromHost();
-  virtual void addCommand(const Command&);
+  virtual void addCommands(const QList<Command>&);
   virtual void cancelCommands(QObject*);
   virtual void readyRead();
 
@@ -83,6 +85,7 @@ class AbstractTransporter : public QObject {
   typedef QHash<QByteArray, QSharedPointer<ResponseEmitter>> Subscriptions;
   Subscriptions m_subscriptions;
   bool m_reconnectEnabled;
+  bool m_pendingClusterRedirect;
   ResponseParser m_parser;
 };
 }  // namespace RedisClient
