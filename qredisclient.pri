@@ -3,16 +3,16 @@ QT += core network
 CONFIG += c++11
 
 HEADERS += \
-    $$PWD/src/qredisclient/*.h \
-    $$PWD/src/qredisclient/transporters/*.h \
-    $$PWD/src/qredisclient/private/*.h \
-    $$PWD/src/qredisclient/utils/*.h \
+    $$files($$PWD/src/qredisclient/*.h) \
+    $$files($$PWD/src/qredisclient/transporters/*.h) \
+    $$files($$PWD/src/qredisclient/private/*.h) \
+    $$files($$PWD/src/qredisclient/utils/*.h) \
 
 SOURCES += \
-    $$PWD/src/qredisclient/*.cpp \
-    $$PWD/src/qredisclient/transporters/*.cpp \
-    $$PWD/src/qredisclient/private/*.cpp \
-    $$PWD/src/qredisclient/utils/*.cpp \
+    $$files($$PWD/src/qredisclient/*.cpp) \
+    $$files($$PWD/src/qredisclient/transporters/*.cpp) \
+    $$files($$PWD/src/qredisclient/private/*.cpp) \
+    $$files($$PWD/src/qredisclient/utils/*.cpp) \
 
 INCLUDEPATH += $$PWD/src/
 
