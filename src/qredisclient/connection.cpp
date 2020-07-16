@@ -768,7 +768,11 @@ QFuture<bool> RedisClient::Connection::isCommandSupported(
 void RedisClient::Connection::auth() {
   try {
     if (m_config.useAuth()) {
-      internalCommandSync({"AUTH", m_config.auth().toUtf8()});
+        if (m_config.useAcl()) {
+            internalCommandSync({"AUTH", m_config.username().toUtf8(), m_config.auth().toUtf8()});
+        } else {
+            internalCommandSync({"AUTH", m_config.auth().toUtf8()});
+        }
     }
 
     bool connectionWithPopulatedServerInfo =

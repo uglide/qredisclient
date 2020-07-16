@@ -39,15 +39,18 @@ class ConnectionConfig {
   QString name() const;
   QString host() const;
   QString auth() const;
+  QString username() const;
   uint port() const;
 
   void setName(QString name);
   void setAuth(QString auth);
+  void setUsername(QString username);
   void setHost(QString host);
   void setPort(uint port);
 
   bool isNull() const;
   bool useAuth() const;
+  bool useAcl() const;
   bool isValid() const;
 
   /*
