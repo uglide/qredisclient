@@ -767,11 +767,20 @@ QFuture<bool> RedisClient::Connection::isCommandSupported(
 
 void RedisClient::Connection::auth() {
   try {
-    if (m_config.useAuth()) {
+    if (m_config.useAuth() || m_config.useAcl()) {
+
+        Response authResult;
+
         if (m_config.useAcl()) {
-            internalCommandSync({"AUTH", m_config.username().toUtf8(), m_config.auth().toUtf8()});
+            authResult = internalCommandSync({"AUTH", m_config.username().toUtf8(), m_config.auth().toUtf8()});
         } else {
-            internalCommandSync({"AUTH", m_config.auth().toUtf8()});
+            authResult = internalCommandSync({"AUTH", m_config.auth().toUtf8()});
+        }
+
+        if (authResult.value().toByteArray() != QByteArray("OK")) {
+            emit authError("AUTH error: invalid credentials");
+            emit error("AUTH ERROR");
+            return;
         }
     }
 
