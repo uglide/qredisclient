@@ -332,6 +332,11 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo() {
 
 void RedisClient::Connection::refreshServerInfo() {
   Response infoResult = internalCommandSync({"INFO", "ALL"});
+  if (infoResult.value().toByteArray().startsWith("NOPERM")) {
+      QString noPermError = infoResult.value().toString();
+      emit error(noPermError);
+      qDebug() << "INFO error:" << noPermError;
+  }
   m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
 }
 
