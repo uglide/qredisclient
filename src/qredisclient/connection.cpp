@@ -332,7 +332,7 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo() {
 
 void RedisClient::Connection::refreshServerInfo() {
   Response infoResult = internalCommandSync({"INFO", "ALL"});
-  if (infoResult.value().toByteArray().startsWith("NOPERM")) {
+  if (infoResult.isPermissionError()) {
       QString noPermError = infoResult.value().toString();
       emit error(noPermError);
       qDebug() << "INFO error:" << noPermError;
@@ -782,7 +782,7 @@ void RedisClient::Connection::auth() {
             authResult = internalCommandSync({"AUTH", m_config.auth().toUtf8()});
         }
 
-        if (authResult.value().toByteArray() != QByteArray("OK")) {
+        if (!authResult.isOkMessage()) {
             emit authError("AUTH error: invalid credentials");
             emit error("AUTH ERROR");
             return;

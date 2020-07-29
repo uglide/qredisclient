@@ -150,6 +150,10 @@ bool RedisClient::Response::isDisabledCommandErrorMessage() const {
   return isErrorMessage() && m_result.toByteArray().contains("unknown command");
 }
 
+bool RedisClient::Response::isPermissionError() const {
+  return isErrorMessage() && m_result.toByteArray().startsWith("NOPERM");
+}
+
 bool RedisClient::Response::isOkMessage() const {
   return m_type == Type::Status && m_result.toByteArray().startsWith("OK");
 }
