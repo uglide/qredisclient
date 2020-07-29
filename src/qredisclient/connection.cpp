@@ -332,6 +332,11 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo() {
 
 void RedisClient::Connection::refreshServerInfo() {
   Response infoResult = internalCommandSync({"INFO", "ALL"});
+  if (infoResult.isPermissionError()) {
+      QString noPermError = infoResult.value().toString();
+      emit error(noPermError);
+      qDebug() << "INFO error:" << noPermError;
+  }
   m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
 }
 
@@ -767,8 +772,21 @@ QFuture<bool> RedisClient::Connection::isCommandSupported(
 
 void RedisClient::Connection::auth() {
   try {
-    if (m_config.useAuth()) {
-      internalCommandSync({"AUTH", m_config.auth().toUtf8()});
+    if (m_config.useAuth() || m_config.useAcl()) {
+
+        Response authResult;
+
+        if (m_config.useAcl()) {
+            authResult = internalCommandSync({"AUTH", m_config.username().toUtf8(), m_config.auth().toUtf8()});
+        } else {
+            authResult = internalCommandSync({"AUTH", m_config.auth().toUtf8()});
+        }
+
+        if (!authResult.isOkMessage()) {
+            emit authError("AUTH error: invalid credentials");
+            emit error("AUTH ERROR");
+            return;
+        }
     }
 
     bool connectionWithPopulatedServerInfo =

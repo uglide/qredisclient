@@ -9,7 +9,7 @@ RedisClient::ConnectionConfig::ConnectionConfig(const QString &host, const QStri
     m_parameters.insert("name", name);
     m_parameters.insert("auth", auth);
     m_parameters.insert("host", host);
-    m_parameters.insert("port", port);    
+    m_parameters.insert("port", port);
     m_parameters.insert("timeout_connect", DEFAULT_TIMEOUT_IN_MS);
     m_parameters.insert("timeout_execute", DEFAULT_TIMEOUT_IN_MS);
 }
@@ -51,6 +51,11 @@ QString RedisClient::ConnectionConfig::auth() const
     return param<QString>("auth");
 }
 
+QString RedisClient::ConnectionConfig::username() const
+{
+    return param<QString>("username");
+}
+
 uint RedisClient::ConnectionConfig::port() const
 {
     return param<uint>("port");
@@ -64,6 +69,11 @@ void RedisClient::ConnectionConfig::setName(QString name)
 void RedisClient::ConnectionConfig::setAuth(QString auth)
 {
     setParam<QString>("auth", auth);
+}
+
+void RedisClient::ConnectionConfig::setUsername(QString username)
+{
+    setParam<QString>("username", username);
 }
 
 void RedisClient::ConnectionConfig::setHost(QString host)
@@ -209,6 +219,11 @@ bool RedisClient::ConnectionConfig::useSshTunnel() const
 bool RedisClient::ConnectionConfig::useAuth() const
 {
     return !param<QString>("auth").isEmpty();
+}
+
+bool RedisClient::ConnectionConfig::useAcl() const
+{
+    return !param<QString>("username").isEmpty();
 }
 
 bool RedisClient::ConnectionConfig::useSsl() const
