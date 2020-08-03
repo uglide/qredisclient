@@ -147,7 +147,7 @@ void RedisClient::Connection::pipelinedCmd(
   }
 
   if (mode() == Mode::Cluster) {
-    QHash<Host, Command> mappedCommands;
+    QHash<Host, QHash<qint16, Command>> mappedCommands;
     QList<Command> pendingCommands;
 
     for (QList<QByteArray> rawCmd : rawCmds) {
@@ -156,20 +156,28 @@ void RedisClient::Connection::pipelinedCmd(
       Command cmd(rawCmd);
       cmd.setCallBack(owner, callback);
       Connection::Host cmdHost = getClusterHost(cmd);
+      qint16 hashSlot = cmd.getHashSlot();
 
       if (mappedCommands.contains(cmdHost)) {
-        mappedCommands[cmdHost].addToPipeline(rawCmd);
+        if (mappedCommands[cmdHost].contains(hashSlot)) {
+          mappedCommands[cmdHost][hashSlot].addToPipeline(rawCmd);
+        } else {
+          mappedCommands[cmdHost][hashSlot] = cmd;
+        }
 
-        if (mappedCommands[cmdHost].length() >= limit) {
-          pendingCommands.append(mappedCommands[cmdHost]);
-          mappedCommands.remove(cmdHost);
+        if (mappedCommands[cmdHost][hashSlot].length() >= limit) {
+          pendingCommands.append(mappedCommands[cmdHost][hashSlot]);
+          mappedCommands[cmdHost].remove(hashSlot);
         }
       } else {
-        mappedCommands[cmdHost] = cmd;
+        mappedCommands[cmdHost][hashSlot] = cmd;
       }
     }
     runCommands(pendingCommands);
-    runCommands(mappedCommands.values());
+
+    for (auto hostMapping : mappedCommands.values()) {
+      runCommands(hostMapping.values());
+    }
   } else {
     RedisClient::Command cmd({}, db);
     cmd.setCallBack(owner, callback);
