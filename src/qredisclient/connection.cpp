@@ -146,9 +146,10 @@ void RedisClient::Connection::pipelinedCmd(
     limit = m_transporter->pipelineCommandsLimit();
   }
 
+  QList<Command> pendingCommands;
+
   if (mode() == Mode::Cluster) {
     QHash<Host, QHash<qint16, Command>> mappedCommands;
-    QList<Command> pendingCommands;
 
     for (QList<QByteArray> rawCmd : rawCmds) {
       if (m_stoppingTransporter) return;
@@ -181,12 +182,22 @@ void RedisClient::Connection::pipelinedCmd(
   } else {
     RedisClient::Command cmd({}, db);
     cmd.setCallBack(owner, callback);
+    cmd.setPipelineCommand(true);
 
     for (QList<QByteArray> rawCmd : rawCmds) {
       if (m_stoppingTransporter) return;
 
+      if (cmd.length() >= limit) {
+          pendingCommands.append(cmd);
+
+          cmd = RedisClient::Command({}, db);
+          cmd.setCallBack(owner, callback);
+          cmd.setPipelineCommand(true);
+      }
+
       cmd.addToPipeline(rawCmd);
     }
+    runCommands(pendingCommands);
     runCommand(cmd);
   }
 }
