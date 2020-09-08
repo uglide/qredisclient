@@ -360,6 +360,8 @@ class Connection : public QObject {
   void setTransporter(QSharedPointer<AbstractTransporter>);
   QSharedPointer<AbstractTransporter> getTransporter() const;
 
+  void callAfterConnect(std::function<void(const QString &err)> callback);
+
  signals:
   void addCommandsToWorker(const QList<Command> &);
   void error(const QString &);
@@ -389,9 +391,7 @@ class Connection : public QObject {
   void clusterConnectToNextMasterNode(
       std::function<void(const QString &err)> callback);
 
-  bool hasNotVisitedClusterNodes() const;
-
-  void callAfterConnect(std::function<void(const QString &err)> callback);
+  bool hasNotVisitedClusterNodes() const;  
 
   void sentinelConnectToMaster();
 
