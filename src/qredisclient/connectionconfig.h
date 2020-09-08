@@ -117,13 +117,7 @@ class ConnectionConfig {
    * Convert config to JSON
    */
   QJsonObject toJsonObject() const;
-  static ConnectionConfig fromJsonObject(const QJsonObject& config);
-
-  /*
-   * Following methods used internally in Connection class
-   */
-  QWeakPointer<Connection> getOwner() const;
-  void setOwner(QWeakPointer<Connection>);
+  static ConnectionConfig fromJsonObject(const QJsonObject& config);  
 
   QVariantHash getInternalParameters() const;
 
@@ -147,7 +141,6 @@ class ConnectionConfig {
   virtual QString getValidPathFromParameter(const QString& param) const;
 
  protected:
-  QWeakPointer<Connection> m_owner;
   QVariantHash m_parameters;
 };
 }  // namespace RedisClient

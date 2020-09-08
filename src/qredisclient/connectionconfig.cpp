@@ -18,7 +18,6 @@ RedisClient::ConnectionConfig &RedisClient::ConnectionConfig::operator =(const C
 {
     if (this != &other) {
         m_parameters = other.m_parameters;
-        m_owner = other.m_owner;
     }
 
     return *this;
@@ -241,16 +240,6 @@ bool RedisClient::ConnectionConfig::isValid() const
     return isNull() == false
             && param<uint>("timeout_connect") > 1000
             && param<uint>("timeout_execute") > 1000;
-}
-
-void RedisClient::ConnectionConfig::setOwner(QWeakPointer<RedisClient::Connection> owner)
-{
-    m_owner = owner;
-}
-
-QWeakPointer<RedisClient::Connection> RedisClient::ConnectionConfig::getOwner() const
-{
-    return m_owner;
 }
 
 QString RedisClient::ConnectionConfig::getSshPrivateKeyPath() const
