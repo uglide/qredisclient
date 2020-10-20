@@ -252,7 +252,17 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
       QTimer::singleShot(0, this, [this, host, port]() {
         qDebug() << "Cluster reconnect to " << host << port;
         reconnectTo(host, port);
-        runCommand(m_commands.dequeue());
+
+        QObject *context = new QObject();
+
+        auto cmdToRetry = m_commands.dequeue();
+
+        QObject::connect(m_connection, &Connection::authOk, context,
+                         [this, context, cmdToRetry]() {
+                           runCommand(cmdToRetry);
+                           delete context;
+                         });
+
         m_pendingClusterRedirect = false;
       });
       return;
