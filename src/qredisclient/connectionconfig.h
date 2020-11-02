@@ -114,6 +114,12 @@ class ConnectionConfig {
   void setClusterHostOverride(bool v);
 
   /*
+   * Filter history
+   */
+  QVariantMap filterHistory();
+  void setFilterHistory(QVariantMap filterHistory);
+
+  /*
    * Convert config to JSON
    */
   QJsonObject toJsonObject() const;

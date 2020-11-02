@@ -200,6 +200,16 @@ void RedisClient::ConnectionConfig::setClusterHostOverride(bool v)
     m_parameters.insert("cluster_host_override", v);
 }
 
+QVariantMap RedisClient::ConnectionConfig::filterHistory()
+{
+    return param<QVariantMap>("filter_history");
+}
+
+void RedisClient::ConnectionConfig::setFilterHistory(QVariantMap filterHistory)
+{
+    m_parameters.insert("filter_history", filterHistory);
+}
+
 bool RedisClient::ConnectionConfig::isNull() const
 {
     return param<QString>("host").isEmpty()
