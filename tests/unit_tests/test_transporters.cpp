@@ -1,6 +1,8 @@
 #include "test_transporters.h"
 #include "mocks/dummyTransporter.h"
 
+#include <QSignalSpy>
+
 void TestTransporters::readPartialResponses() {
   // given
   RedisClient::ConnectionConfig dummyConf = getDummyConfig();
@@ -56,13 +58,15 @@ void TestTransporters::handleClusterRedirects() {
   transporter->addFakeResponse(movedReply);
 
   // Responses for reconnectons
-  for (int i = 0; i < 5; i++) {
+  for (int i = 0; i < 6; i++) {
     transporter->addFakeResponse(QString("+PONG\r\n"));
     transporter->fakeResponses.push_back(
         RedisClient::Response(RedisClient::Response::Type::String, infoReply));
     transporter->addFakeResponse(clusterSlotsReply);
     transporter->addFakeResponse(movedReply);
   }
+  QSignalSpy spy(connection.data(), &RedisClient::Connection::error);
+  bool commandReturnedResult = false;
 
   // when
   connection->setTransporter(transporter);
@@ -70,12 +74,15 @@ void TestTransporters::handleClusterRedirects() {
 
   connection->cmd(
       {"type", "test"}, this, 0,
-      [this, transporter](const RedisClient::Response& r) {
+      [this, transporter, &commandReturnedResult](const RedisClient::Response& r) {
         qDebug() << "fake response received";
         qDebug() << "commands:" << transporter->executedCommands.size();
+        commandReturnedResult = true;
       },
       [this](const QString& err) { qDebug() << "fake err received" << err; });
 
-  wait(100000);
-  qDebug() << "commands:" << transporter->executedCommands.size();
+  wait(1000);
+  QCOMPARE(transporter->executedCommands.size(), 24);
+  QCOMPARE(commandReturnedResult, false);
+  QCOMPARE(spy.count(), 1);
 }

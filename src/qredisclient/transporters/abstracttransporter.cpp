@@ -288,6 +288,20 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
       return executeCmd(m_internalCommands.dequeue());
   }
 
+  for (auto runningCmd : m_runningCommands) {
+      if (runningCmd->cmd.isHiPriorityCommand()) {
+          QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
+          return;
+      }
+  }
+
+  if (m_connection->mode() == Connection::Mode::Cluster
+          && m_connection->m_clusterSlots.size() == 0) {
+      qDebug() << "Waiting for cluster slots";
+      QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
+      return;
+  }
+
   if (m_connection->mode() == Connection::Mode::Cluster) {
     if (m_connection->m_clusterSlots.size() > 0) {
       nextCmd = pickNextCommandForCurrentNode();
@@ -328,7 +342,7 @@ void RedisClient::AbstractTransporter::processClusterRedirect(
     const RedisClient::Response &response) {
   Q_ASSERT(runningCommand);
 
-  if (m_followedClusterRedirects > MAX_CLUSTER_REDIRECTS) {
+  if (m_followedClusterRedirects >= MAX_CLUSTER_REDIRECTS) {
       emit errorOccurred("Too many cluster redirects. Connection aborted.");
       disconnectFromHost();
       return;
