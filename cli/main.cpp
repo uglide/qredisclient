@@ -46,8 +46,8 @@ int main(int argc, char *argv[])
 
     try {
         connection.connect();
-        auto result = connection.commandSync(cmd);
-        QVariant val = result.getValue();
+        auto result = connection.commandSync(cmd);        
+        QVariant val = result.value();
         std::cout << RedisClient::Response::valueToHumanReadString(val).toStdString();
     } catch (const RedisClient::Connection::Exception& e) {
         std::cerr << "Cannot run command:" << e.what();

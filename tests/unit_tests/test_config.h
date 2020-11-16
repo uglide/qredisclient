@@ -9,7 +9,6 @@ class TestConfig : public QObject
 
 private slots:
     void testGetParam();
-    void testOwner();
     void testSerialization();
 };
 

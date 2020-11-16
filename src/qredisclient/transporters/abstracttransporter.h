@@ -59,6 +59,8 @@ class AbstractTransporter : public QObject {
   virtual void sendCommand(const QByteArray& cmd) = 0;
   virtual void sendResponse(const Response& response);
   void resetDbIndex();
+  Command pickNextCommandForCurrentNode();
+  void pickClusterNodeForNextCommand();
 
  protected:
   class RunningCommand {
@@ -82,10 +84,12 @@ class AbstractTransporter : public QObject {
   Connection* m_connection;
   QQueue<QSharedPointer<RunningCommand>> m_runningCommands;
   QQueue<Command> m_commands;
+  QQueue<Command> m_internalCommands;
   typedef QHash<QByteArray, QSharedPointer<ResponseEmitter>> Subscriptions;
   Subscriptions m_subscriptions;
   bool m_reconnectEnabled;
   bool m_pendingClusterRedirect;
   ResponseParser m_parser;
+  uint m_followedClusterRedirects;
 };
 }  // namespace RedisClient

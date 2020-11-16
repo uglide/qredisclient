@@ -7,11 +7,14 @@
 #include "qredisclient/private/responseemmiter.h"
 #include "qredisclient/utils/text.h"
 
+#define MAX_CLUSTER_REDIRECTS 5
+
 RedisClient::AbstractTransporter::AbstractTransporter(
     RedisClient::Connection *connection)
     : m_connection(connection),
       m_reconnectEnabled(true),
-      m_pendingClusterRedirect(false) {
+      m_pendingClusterRedirect(false),
+      m_followedClusterRedirects(0) {
   // connect signals & slots between connection & transporter
   connect(connection, SIGNAL(addCommandsToWorker(const QList<Command> &)), this,
           SLOT(addCommands(const QList<Command> &)));
@@ -45,14 +48,16 @@ void RedisClient::AbstractTransporter::init() {
 void RedisClient::AbstractTransporter::disconnectFromHost() {
   cancelRunningCommands();
   m_commands.clear();
+  m_internalCommands.clear();
   m_pendingClusterRedirect = false;
+  m_followedClusterRedirects = 0;
 }
 
 void RedisClient::AbstractTransporter::addCommands(
     const QList<Command> &commands) {
   for (auto cmd : commands) {
     if (cmd.isHiPriorityCommand())
-      m_commands.prepend(cmd);
+      m_internalCommands.enqueue(cmd);
     else
       m_commands.enqueue(cmd);
   }
@@ -138,9 +143,16 @@ void RedisClient::AbstractTransporter::sendResponse(
 
   // Reconnect to different server in cluster and reissue current
   // command if needed
-  if (m_connection->mode() == Connection::Mode::Cluster &&
-      (response.isAskRedirect() || response.isMovedRedirect())) {
-    return processClusterRedirect(runningCommand, response);
+  if (m_connection->mode() == Connection::Mode::Cluster) {
+    if (response.isAskRedirect() || response.isMovedRedirect()) {
+      return processClusterRedirect(runningCommand, response);
+    }
+
+    // Reset cluster redirections counter on first successful reply
+    bool isKeyCmd = runningCommand->cmd.getKeyName().size() > 0;
+    if (isKeyCmd) {
+      m_followedClusterRedirects = 0;
+    }
   }
 
   if (runningCommand->cmd.isUnSubscriptionCommand()) {
@@ -168,14 +180,70 @@ void RedisClient::AbstractTransporter::sendResponse(
 }
 
 void RedisClient::AbstractTransporter::resetDbIndex() {
-  m_connection->changeCurrentDbNumber(0);
+    m_connection->changeCurrentDbNumber(0);
+}
+
+RedisClient::Command
+RedisClient::AbstractTransporter::pickNextCommandForCurrentNode() {
+  if (isSocketReconnectRequired()) {
+    return Command();
+  }
+
+  auto config = m_connection->getConfig();
+  int index = 0;
+
+  for (auto cmd : m_commands) {
+    bool keylessCmd = cmd.getKeyName().isEmpty();
+    Connection::Host cmdHost = m_connection->getClusterHost(cmd);
+
+    if (keylessCmd ||
+        (config.overrideClusterHost() && cmdHost.first == config.host() &&
+         cmdHost.second == config.port()) ||
+        cmdHost.second == config.port()) {
+      m_commands.removeAt(index);
+
+      return cmd;
+    }
+    ++index;
+  }
+
+  return Command();
+}
+
+void RedisClient::AbstractTransporter::pickClusterNodeForNextCommand()
+{
+    auto config = m_connection->getConfig();
+
+    auto nextClusterHost = m_connection->getClusterHost(m_commands.first());
+
+    QString host;
+    int port = nextClusterHost.second;
+
+    if (m_connection->m_config.overrideClusterHost()) {
+      host = nextClusterHost.first;
+    } else {
+      host = config.host();
+    }
+
+    m_pendingClusterRedirect = true;
+
+    QTimer::singleShot(0, this, [this, host, port]() {
+      qDebug() << "Cluster reconnect to " << host << port;
+      reconnectTo(host, port);
+      m_pendingClusterRedirect = false;
+    });
 }
 
 void RedisClient::AbstractTransporter::reAddRunningCommandToQueue() {
   qDebug() << "Running commands: " << m_runningCommands.size();
 
   for (auto curr : m_runningCommands) {
-    m_commands.prepend(curr->cmd);
+      if (curr->cmd.isHiPriorityCommand()) {
+        m_internalCommands.prepend(curr->cmd);
+      } else {
+        m_commands.prepend(curr->cmd);
+      }
+
   }
   m_runningCommands.clear();
 
@@ -198,85 +266,57 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
     return;
   }
 
-  if (m_commands.isEmpty()) {
+  if (m_internalCommands.isEmpty() && m_commands.isEmpty()) {
     emit queueIsEmpty();
     return;
-  }
+  }  
 
-  if (m_connection->mode() != Connection::Mode::Cluster &&
-      m_commands.size() > 0 && m_commands.head().hasDbIndex()) {
-    QList<QByteArray> selectCmdRaw = {
-        "SELECT", QString::number(m_commands.head().getDbIndex()).toLatin1()};
-    Command selectCmd(selectCmdRaw);
-    runCommand(selectCmd);
-  }
+  Command nextCmd;
 
-  if (m_connection->mode() == Connection::Mode::Cluster &&
-      m_connection->m_clusterSlots.size() > 0) {
-    auto config = m_connection->getConfig();
-
-    if (!isSocketReconnectRequired()) {
-      int index = 0;
-      for (auto cmd : m_commands) {
-        bool keylessCmd = cmd.getKeyName().isEmpty();
-        Connection::Host cmdHost = m_connection->getClusterHost(cmd);
-
-        if (keylessCmd ||
-            (config.overrideClusterHost() && cmdHost.first == config.host() &&
-             cmdHost.second == config.port()) ||
-            cmdHost.second == config.port()) {
-          m_commands.removeAt(index);
-          runCommand(cmd);
-          QTimer::singleShot(0, this,
-                             &AbstractTransporter::processCommandQueue);
-          return;
-        }
-        ++index;
-      }
+  auto executeCmd = [this](const Command &cmd) {
+    if (m_connection->mode() != Connection::Mode::Cluster && cmd.hasDbIndex()) {
+      Command selectCmd(
+          {"SELECT", QString::number(cmd.getDbIndex()).toLatin1()});
+      runCommand(selectCmd);
     }
 
-    if (m_runningCommands.size() == 0) {
-      auto nextClusterHost = m_connection->getClusterHost(m_commands.first());
-
-      QString host;
-      int port = nextClusterHost.second;
-
-      if (m_connection->m_config.overrideClusterHost()) {
-        host = nextClusterHost.first;
-      } else {
-        host = config.host();
-      }
-
-      m_pendingClusterRedirect = true;
-
-      QTimer::singleShot(0, this, [this, host, port]() {
-        qDebug() << "Cluster reconnect to " << host << port;
-        reconnectTo(host, port);
-
-        QObject *context = new QObject();
-
-        auto cmdToRetry = m_commands.dequeue();
-
-        QObject::connect(m_connection, &Connection::authOk, context,
-                         [this, context, cmdToRetry]() {
-                           runCommand(cmdToRetry);
-                           delete context;
-                         });
-
-        m_pendingClusterRedirect = false;
-      });
-      return;
-    }
+    runCommand(cmd);
     QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
-  } else {
-    if (m_connection->mode() == Connection::Mode::Cluster) {
+  };
+
+  if (m_internalCommands.size() > 0) {
+      return executeCmd(m_internalCommands.dequeue());
+  }
+
+  for (auto runningCmd : m_runningCommands) {
+      if (runningCmd->cmd.isHiPriorityCommand()) {
+          QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
+          return;
+      }
+  }
+
+  if (m_connection->mode() == Connection::Mode::Cluster
+          && m_connection->m_clusterSlots.size() == 0) {
+      qDebug() << "Waiting for cluster slots";
+      QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
+      return;
+  }
+
+  if (m_connection->mode() == Connection::Mode::Cluster) {
+    if (m_connection->m_clusterSlots.size() > 0) {
+      nextCmd = pickNextCommandForCurrentNode();
+
+      if (!nextCmd.isValid() && m_runningCommands.size() == 0) {
+        return pickClusterNodeForNextCommand();
+      }
+    } else {
       qWarning() << "Blind cluster connection";
     }
-
-    runCommand(m_commands.dequeue());
-
-    QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
   }
+
+  if (!nextCmd.isValid()) nextCmd = m_commands.dequeue();
+
+  executeCmd(nextCmd);
 }
 
 void RedisClient::AbstractTransporter::logResponse(
@@ -302,6 +342,14 @@ void RedisClient::AbstractTransporter::processClusterRedirect(
     const RedisClient::Response &response) {
   Q_ASSERT(runningCommand);
 
+  if (m_followedClusterRedirects >= MAX_CLUSTER_REDIRECTS) {
+      emit errorOccurred("Too many cluster redirects. Connection aborted.");
+      disconnectFromHost();
+      return;
+  }
+
+  m_pendingClusterRedirect = true;
+
   m_commands.prepend(runningCommand->cmd);
   runningCommand.clear();
 
@@ -314,9 +362,16 @@ void RedisClient::AbstractTransporter::processClusterRedirect(
     host = m_connection->m_config.host();
   }
 
+  // Information about cluster slots is outdated - trigger update
+  m_connection->m_serverInfo = ServerInfo();
+  m_connection->m_clusterSlots = Connection::ClusterSlots();
+
   QTimer::singleShot(1, this, [this, host, port]() {
     qDebug() << "Cluster redirect to " << host << port;
     reconnectTo(host, port);
+
+    m_pendingClusterRedirect = false;
+    m_followedClusterRedirects += 1;
   });
 }
 

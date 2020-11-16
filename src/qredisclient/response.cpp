@@ -100,34 +100,38 @@ QString RedisClient::Response::valueToHumanReadString(const QVariant& value,
   QString indent = QString(" ").repeated(indentLevel);
 
   if (value.isNull()) {
-    result = QString("null");
+    result.append(QString("null"));
   } else if (value.type() == QVariant::Bool) {
-    result = QString(value.toBool() ? "true" : "false");
-  } else if (value.type() == QVariant::StringList) {
-    int index = 1;
-    for (QVariant line : value.toList()) {
-      result.append(
-          QString("%1 %2) %3\r\n")
-              .arg(indent)
-              .arg(QString::number(index++))
-              .arg(QString("\"%1\"").arg(printableString(line.toByteArray()))));
-    }
+    result.append(QString(value.toBool() ? "true" : "false"));
   } else if (value.type() == QVariant::List ||
              value.canConvert(QVariant::List)) {
     QVariantList list = value.value<QVariantList>();
 
     int index = 1;
+    int whitespaceSize = QString::number(list.size()).size() + 2;
+
     for (QVariant item : list) {
-      result.append(QString("%1 %2) %3\r\n")
-                        .arg(indent)
-                        .arg(QString::number(index++))
-                        .arg(valueToHumanReadString(item, indentLevel + 1)));
+      QString indexStr = QString("%1)").arg(QString::number(index++));
+
+      if (indexStr.size() < whitespaceSize)
+        indexStr.append(
+            QString(" ").repeated(whitespaceSize - indexStr.size()));
+
+      QString val = valueToHumanReadString(item, indentLevel + whitespaceSize);
+
+      if (item.canConvert(QVariant::List)) {
+        val = val.mid(indent.size() + indexStr.size());
+      }
+
+      QString line = QString("%1%2%3\r\n").arg(indent).arg(indexStr).arg(val);
+
+      result.append(line);
     }
   } else {
-    result = QString("\"%1\"").arg(printableString(value.toByteArray()));
+    result.append(QString("\"%1\"").arg(printableString(value.toByteArray())));
   }
 
-  return indent + result;
+  return result;
 }
 
 bool RedisClient::Response::isErrorMessage() const {

@@ -5,6 +5,7 @@
 #include "qredisclient/command.h"
 #include "qredisclient/response.h"
 #include "qredisclient/transporters/abstracttransporter.h"
+#include "qredisclient/connection.h"
 
 class DummyTransporter : public RedisClient::AbstractTransporter {
   Q_OBJECT
@@ -15,18 +16,33 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
         disconnectCalls(0),
         addCommandCalls(0),
         cancelCommandsCalls(0),
-        m_catchParsedResponses(false) {}
+        m_catchParsedResponses(false) {
+    connect(c, &RedisClient::Connection::log,
+            [](const QString& log) { qDebug() << "Connection log:" << log; });
+
+    connect(c, &RedisClient::Connection::error,
+            [](const QString& log) { qDebug() << "Connection error:" << log; });
+
+    infoReply = QString("redis_version:999.999.999\n");
+  }
 
   int initCalls;
   int disconnectCalls;
   int addCommandCalls;
   int cancelCommandsCalls;
 
+  QString infoReply;
+
   void setFakeResponses(const QStringList& respList) {
     for (QString response : respList) {
       m_parser.feedBuffer(response.toLatin1());
       fakeResponses.push_back(m_parser.getNextResponse());
     }
+  }
+
+  void addFakeResponse(const QString& r) {
+      m_parser.feedBuffer(r.toLatin1());
+      fakeResponses.push_back(m_parser.getNextResponse());
   }
 
   void setFakeReadBuffer(const QByteArray& buf) {
@@ -39,9 +55,9 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
   QList<RedisClient::Response> catchedResponses;
 
  public slots:
-  void addCommand(const RedisClient::Command& cmd) override {
-    addCommandCalls++;
-    RedisClient::AbstractTransporter::addCommand(cmd);
+  void addCommands(const QList<RedisClient::Command>& commands) override {
+    addCommandCalls += commands.size();
+    RedisClient::AbstractTransporter::addCommands(commands);
   }
 
   void init() {
@@ -49,7 +65,7 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
 
     // Init command tested after socket connection
     RedisClient::Response info(RedisClient::Response::Type::String,
-                               "redis_version:999.999.999");
+                               infoReply);
     fakeResponses.push_front(info);
 
     RedisClient::Response r(RedisClient::Response::Type::String, "PONG");
@@ -92,7 +108,10 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
     }
   }
 
-  void reconnect() override {}
+  void  reconnect() override {
+      qDebug() << "Fake reconnect";
+      emit connected();
+  }
   bool isInitialized() const override { return true; }
   bool isSocketReconnectRequired() const override { return false; }
   bool canReadFromSocket() override { return !m_fakeBuffer.isEmpty(); }

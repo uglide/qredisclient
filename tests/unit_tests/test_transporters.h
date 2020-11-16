@@ -8,4 +8,5 @@ class TestTransporters : public BaseTestCase {
 
  private slots:
   void readPartialResponses();
+  void handleClusterRedirects();
 };
