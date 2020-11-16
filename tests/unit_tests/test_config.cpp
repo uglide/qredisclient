@@ -30,20 +30,6 @@ void TestConfig::testGetParam()
     QCOMPARE(actualAuth, auth);
 }
 
-void TestConfig::testOwner()
-{
-    //given
-    ConnectionConfig config;
-    QSharedPointer<Connection> testObj(new Connection(config));
-
-    //when
-    config.setOwner(testObj.toWeakRef());
-
-
-    //then
-    QCOMPARE(config.getOwner().toStrongRef(), testObj);
-}
-
 void TestConfig::testSerialization()
 {
     //given
