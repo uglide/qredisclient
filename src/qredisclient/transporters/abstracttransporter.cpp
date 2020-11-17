@@ -13,7 +13,7 @@ RedisClient::AbstractTransporter::AbstractTransporter(
     RedisClient::Connection *connection)
     : m_connection(connection),
       m_reconnectEnabled(true),
-      m_pendingClusterRedirect(false),
+      m_pendingClusterRedirect(false),      
       m_followedClusterRedirects(0) {
   // connect signals & slots between connection & transporter
   connect(connection, SIGNAL(addCommandsToWorker(const QList<Command> &)), this,
@@ -212,6 +212,9 @@ RedisClient::AbstractTransporter::pickNextCommandForCurrentNode() {
 
 void RedisClient::AbstractTransporter::pickClusterNodeForNextCommand()
 {
+    if (m_pendingClusterRedirect)
+        return;
+
     auto config = m_connection->getConfig();
 
     auto nextClusterHost = m_connection->getClusterHost(m_commands.first());
@@ -293,16 +296,14 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
           QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
           return;
       }
-  }
-
-  if (m_connection->mode() == Connection::Mode::Cluster
-          && m_connection->m_clusterSlots.size() == 0) {
-      qDebug() << "Waiting for cluster slots";
-      QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
-      return;
-  }
+  }  
 
   if (m_connection->mode() == Connection::Mode::Cluster) {
+    if (m_connection->m_clusterSlots.size() == 0 || m_runningCommands.size() > 0) {
+        QTimer::singleShot(1, this, &AbstractTransporter::processCommandQueue);
+        return;
+    }
+
     if (m_connection->m_clusterSlots.size() > 0) {
       nextCmd = pickNextCommandForCurrentNode();
 
@@ -348,10 +349,14 @@ void RedisClient::AbstractTransporter::processClusterRedirect(
       return;
   }
 
-  m_pendingClusterRedirect = true;
-
   m_commands.prepend(runningCommand->cmd);
   runningCommand.clear();
+
+  if (m_pendingClusterRedirect) {
+      return;
+  }
+
+  m_pendingClusterRedirect = true;
 
   QString host;
   int port = response.getRedirectionPort();
