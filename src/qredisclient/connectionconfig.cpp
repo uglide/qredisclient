@@ -29,10 +29,20 @@ RedisClient::ConnectionConfig::ConnectionConfig(const QVariantHash &options)
 }
 
 QByteArray RedisClient::ConnectionConfig::id() const
-{
+{        
+    QByteArray storedId = param<QByteArray>("id");
+
+    if (!storedId.isEmpty())
+        return storedId;
+
     QCryptographicHash hash(QCryptographicHash::Sha256);
     hash.addData(QJsonDocument(toJsonObject()).toJson(QJsonDocument::Compact));
     return hash.result();
+}
+
+void RedisClient::ConnectionConfig::setId(QByteArray id)
+{
+    setParam<QByteArray>("id", id);
 }
 
 QString RedisClient::ConnectionConfig::name() const
@@ -286,7 +296,9 @@ RedisClient::ConnectionConfig RedisClient::ConnectionConfig::fromJsonObject(cons
 
 QJsonObject RedisClient::ConnectionConfig::toJsonObject() const
 {
-    return QJsonObjectFromVariantHash(m_parameters);
+    auto params = m_parameters;
+    params.remove("id");
+    return QJsonObjectFromVariantHash(params);
 }
 
 QString RedisClient::ConnectionConfig::getValidPathFromParameter(const QString &name) const

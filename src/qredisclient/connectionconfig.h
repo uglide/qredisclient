@@ -35,6 +35,7 @@ class ConnectionConfig {
   virtual ~ConnectionConfig() {}
 
   QByteArray id() const;
+  void setId(QByteArray id);
 
   QString name() const;
   QString host() const;
