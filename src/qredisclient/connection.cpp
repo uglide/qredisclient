@@ -784,9 +784,10 @@ void RedisClient::Connection::auth() {
         }
 
         if (!authResult.isOkMessage()) {
-            emit authError("AUTH error: invalid credentials");
-            emit error("AUTH ERROR");
-            return;
+          emit authError("Invalid credentials");
+          emit error(QString("AUTH ERROR. Invalid credentials: %1")
+                         .arg(authResult.value().toString()));
+          return;
         }
     }
 
@@ -804,7 +805,9 @@ void RedisClient::Connection::auth() {
 
     if (testResult.value().toByteArray() != QByteArray("PONG")) {
       emit authError("Redis server requires password or password is not valid");
-      emit error("AUTH ERROR");
+      emit error(QString("AUTH ERROR. Redis server requires password or "
+                         "password is not valid: %1")
+                     .arg(testResult.value().toString()));
       return;
     }
 
