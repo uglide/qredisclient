@@ -783,22 +783,19 @@ void RedisClient::Connection::auth() {
             authResult = internalCommandSync({"AUTH", m_config.auth().toUtf8()});
         }
 
-        if (!authResult.isOkMessage()) {
+        if (authResult.isWrongPasswordError()) {
           emit authError("Invalid credentials");
           emit error(QString("AUTH ERROR. Invalid credentials: %1")
                          .arg(authResult.value().toString()));
           return;
+        } else {
+          // NOTE(u_glide): Workaround for redis-sentinel < 5.0 and for
+          // redis-sentinels >= 5.0.1 without configured password
+          emit log(QString("redis-server doesn't support AUTH command or is"
+                           "misconfigured. Trying "
+                           "to proceed without password. (Error: %1)")
+                       .arg(authResult.value().toString()));
         }
-    }
-
-    bool connectionWithPopulatedServerInfo =
-        (m_serverInfo.parsed.size() > 0 &&
-         (m_currentMode == Mode::Cluster || m_currentMode == Mode::Normal));
-
-    if (connectionWithPopulatedServerInfo) {
-      emit authOk();
-      emit connected();
-      return;
     }
 
     Response testResult = internalCommandSync({"PING"});
@@ -808,6 +805,16 @@ void RedisClient::Connection::auth() {
       emit error(QString("AUTH ERROR. Redis server requires password or "
                          "password is not valid: %1")
                      .arg(testResult.value().toString()));
+      return;
+    }
+
+    bool connectionWithPopulatedServerInfo =
+        (m_serverInfo.parsed.size() > 0 &&
+         (m_currentMode == Mode::Cluster || m_currentMode == Mode::Normal));
+
+    if (connectionWithPopulatedServerInfo) {
+      emit authOk();
+      emit connected();
       return;
     }
 

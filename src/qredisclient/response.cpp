@@ -155,7 +155,12 @@ bool RedisClient::Response::isDisabledCommandErrorMessage() const {
 }
 
 bool RedisClient::Response::isPermissionError() const {
-  return isErrorMessage() && m_result.toByteArray().startsWith("NOPERM");
+    return isErrorMessage() && m_result.toByteArray().startsWith("NOPERM");
+}
+
+bool RedisClient::Response::isWrongPasswordError() const
+{
+    return isErrorMessage() && m_result.toByteArray().startsWith("WRONGPASS");
 }
 
 bool RedisClient::Response::isOkMessage() const {
