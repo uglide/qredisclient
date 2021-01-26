@@ -2,6 +2,8 @@
 
 #include <QDateTime>
 #include <QDebug>
+#include <QNetworkProxy>
+#include <QSettings>
 
 #include "qredisclient/connection.h"
 #include "qredisclient/private/responseemmiter.h"
@@ -235,6 +237,22 @@ void RedisClient::AbstractTransporter::pickClusterNodeForNextCommand()
       reconnectTo(host, port);
       m_pendingClusterRedirect = false;
     });
+}
+
+bool RedisClient::AbstractTransporter::validateSystemProxy() {
+  QNetworkProxyQuery query;
+  query.setQueryType(QNetworkProxyQuery::TcpSocket);
+  auto proxy = QNetworkProxyFactory::systemProxyForQuery(query).constFirst();
+
+  QSettings settings;
+  bool disableProxy =
+      settings.value("app/disableProxyForRedisConnections", false).toBool();
+
+  qDebug() << "disableProxyForRedisConnections:" << disableProxy;
+
+  qDebug() << "proxy type:" << proxy.type();
+
+  return proxy.type() == QNetworkProxy::Socks5Proxy && !disableProxy;
 }
 
 void RedisClient::AbstractTransporter::reAddRunningCommandToQueue() {

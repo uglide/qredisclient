@@ -62,6 +62,8 @@ class AbstractTransporter : public QObject {
   Command pickNextCommandForCurrentNode();
   void pickClusterNodeForNextCommand();
 
+  virtual bool validateSystemProxy();
+
  protected:
   class RunningCommand {
    public:

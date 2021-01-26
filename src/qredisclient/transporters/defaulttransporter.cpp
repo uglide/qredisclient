@@ -18,7 +18,11 @@ void RedisClient::DefaultTransporter::initSocket() {
   using namespace RedisClient;
 
   m_socket = QSharedPointer<QSslSocket>(new QSslSocket());
-  m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);
+  m_socket->setSocketOption(QAbstractSocket::KeepAliveOption, 1);  
+
+  if (!validateSystemProxy()) {
+    m_socket->setProxy(QNetworkProxy::NoProxy);
+  }
 
   connect(
       m_socket.data(),
