@@ -4,6 +4,7 @@
 #include "qredisclient/utils/sync.h"
 
 #include <QSslConfiguration>
+#include <QNetworkProxy>
 
 RedisClient::DefaultTransporter::DefaultTransporter(RedisClient::Connection *c)
     : RedisClient::AbstractTransporter(c),
