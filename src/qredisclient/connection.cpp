@@ -751,6 +751,8 @@ RedisClient::Connection::Host RedisClient::Connection::getClusterHost(
     }
   }
 
+  qWarning() << "cannot find cluster node for slot:" << slot;
+
   return Host(m_config.host(), m_config.port());
 }
 
@@ -788,7 +790,7 @@ void RedisClient::Connection::auth() {
           emit error(QString("AUTH ERROR. Invalid credentials: %1")
                          .arg(authResult.value().toString()));
           return;
-        } else {
+        } else if (!authResult.isOkMessage()) {
           // NOTE(u_glide): Workaround for redis-sentinel < 5.0 and for
           // redis-sentinels >= 5.0.1 without configured password
           emit log(QString("redis-server doesn't support AUTH command or is"

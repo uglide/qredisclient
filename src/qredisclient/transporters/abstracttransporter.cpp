@@ -232,8 +232,11 @@ void RedisClient::AbstractTransporter::pickClusterNodeForNextCommand()
 
     m_pendingClusterRedirect = true;
 
-    QTimer::singleShot(0, this, [this, host, port]() {
-      qDebug() << "Cluster reconnect to " << host << port;
+    emit logEvent(QString("Cluster node picked for next command: %1:%2")
+                      .arg(host)
+                      .arg(port));
+
+    QTimer::singleShot(0, this, [this, host, port]() {      
       reconnectTo(host, port);
       m_pendingClusterRedirect = false;
     });
@@ -389,8 +392,9 @@ void RedisClient::AbstractTransporter::processClusterRedirect(
   m_connection->m_serverInfo = ServerInfo();
   m_connection->m_clusterSlots = Connection::ClusterSlots();
 
-  QTimer::singleShot(1, this, [this, host, port]() {
-    qDebug() << "Cluster redirect to " << host << port;
+  emit logEvent(QString("Cluster redirect to  %1:%2").arg(host).arg(port));
+
+  QTimer::singleShot(1, this, [this, host, port]() {        
     reconnectTo(host, port);
 
     m_pendingClusterRedirect = false;
