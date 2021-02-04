@@ -85,6 +85,10 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
     if (fakeResponses.size() > 0) {
       resp = fakeResponses.first();
       fakeResponses.removeFirst();
+
+      qDebug() << "cmd: " << cmd.getRawString();
+      qDebug() << "fake resp: " << resp.value().toByteArray();
+
     } else {
       qDebug() << "Unexpected command: " << cmd.getRawString();
       qDebug() << "Previous commands:";
@@ -109,7 +113,7 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
   }
 
   void  reconnect() override {
-      qDebug() << "Fake reconnect";
+      qDebug() << "Fake reconnect";      
       emit connected();
   }
   bool isInitialized() const override { return true; }

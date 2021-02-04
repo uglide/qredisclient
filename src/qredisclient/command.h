@@ -103,7 +103,7 @@ public:
    * @brief getHashSlot
    * @return
    */
-  qint16 getHashSlot() const;
+  quint16 getHashSlot() const;
 
   /**
    * @brief Get database index where this command should be executed

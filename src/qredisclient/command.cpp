@@ -107,7 +107,7 @@ quint16 RedisClient::Command::calcKeyHashSlot(const QByteArray &k) {
   if (start != -1) {
     int end = key.indexOf('}', start + 1);
     if (end != -1 && end != start + 1) {
-      key = key.mid(start + 1, end);
+      key = key.mid(start + 1, end - start - 1);
     }
   }
 
@@ -194,7 +194,7 @@ QString RedisClient::Command::getPartAsString(int i) const {
   return QString::fromUtf8(m_commandWithArguments.at(i));
 }
 
-qint16 RedisClient::Command::getHashSlot() const {
+quint16 RedisClient::Command::getHashSlot() const {
   return calcKeyHashSlot(getKeyName());
 }
 
