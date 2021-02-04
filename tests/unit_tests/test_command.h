@@ -19,5 +19,8 @@ private slots:
     void scanCommandIsValid_data();
 
     void pipelineCommand();
+
+    void calcKeyHashSlot();
+    void calcKeyHashSlot_data();
 };
 

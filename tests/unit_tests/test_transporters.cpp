@@ -54,6 +54,8 @@ void TestTransporters::handleClusterRedirects() {
 
   // Slots map "test" key to 7001 port
   transporter->addFakeResponse(clusterSlotsReply);
+  transporter->addFakeResponse(QString("+PONG\r\n"));
+
   // But node reply with redirect to 7005 port
   transporter->addFakeResponse(movedReply);
 
@@ -62,7 +64,8 @@ void TestTransporters::handleClusterRedirects() {
     transporter->addFakeResponse(QString("+PONG\r\n"));
     transporter->fakeResponses.push_back(
         RedisClient::Response(RedisClient::Response::Type::String, infoReply));
-    transporter->addFakeResponse(clusterSlotsReply);
+    transporter->addFakeResponse(clusterSlotsReply);    
+    transporter->addFakeResponse(QString("+PONG\r\n"));
     transporter->addFakeResponse(movedReply);
   }
   QSignalSpy spy(connection.data(), &RedisClient::Connection::error);
@@ -82,7 +85,7 @@ void TestTransporters::handleClusterRedirects() {
       [this](const QString& err) { qDebug() << "fake err received" << err; });
 
   wait(1000);
-  QCOMPARE(transporter->executedCommands.size(), 24);
+  QCOMPARE(transporter->executedCommands.size(), 30);
   QCOMPARE(commandReturnedResult, false);
   QCOMPARE(spy.count(), 1);
 }
