@@ -141,7 +141,7 @@ class Connection : public QObject {
    * @brief update internal structure for methods getServerVersion() and
    * getKeyspaceInfo()
    */
-  virtual void refreshServerInfo();
+  virtual void refreshServerInfo(std::function<void()> callback);
 
   /*
    * Hi-Level Operations API
@@ -193,9 +193,9 @@ class Connection : public QObject {
 
   /**
    * @brief getMasterNodes - Get master nodes of cluster
-   * @return HostList
+   * @return
    */
-  HostList getMasterNodes();
+  void getMasterNodes(std::function<void(HostList, const QString& err)> callback);
 
   typedef QPair<int, int> Range;
   typedef QMap<Range, Host> ClusterSlots;
@@ -204,7 +204,7 @@ class Connection : public QObject {
    * @brief getClusterSlots
    * @return
    */
-  ClusterSlots getClusterSlots();
+  void getClusterSlots(std::function<void(ClusterSlots, const QString& err)> callback);
 
   /**
    * @brief getClisterHost
@@ -245,7 +245,7 @@ class Connection : public QObject {
    */
   QFuture<Response> command(QList<QByteArray> rawCmd, QObject *owner,
                             RedisClient::Command::Callback callback,
-                            int db = -1);
+                            int db = -1, bool priorityCmd=false);
 
   /**
    * @brief Hi-level wrapper with basic error handling
@@ -258,7 +258,8 @@ class Connection : public QObject {
   inline QFuture<Response> cmd(
       QList<QByteArray> rawCmd, QObject *owner, int db,
       std::function<void(const RedisClient::Response &)> callback,
-      std::function<void(const QString &)> errback) {
+      std::function<void(const QString &)> errback,
+      bool hiPriorityCmd=false) {
     try {
       return this->command(
           rawCmd, owner,
@@ -268,7 +269,7 @@ class Connection : public QObject {
 
             return callback(r);
           },
-          db);
+          db, hiPriorityCmd);
     } catch (const RedisClient::Connection::Exception &e) {
       errback(QString(e.what()));
       return QFuture<Response>();
@@ -285,21 +286,6 @@ class Connection : public QObject {
   void pipelinedCmd(
       QList<QList<QByteArray>> rawCmds, QObject *owner, int db,
       std::function<void(const RedisClient::Response &, QString err)> callback);
-
-  /**
-   * @brief commandSync
-   * @param cmd
-   * @return
-   */
-  Response commandSync(const Command &cmd);
-
-  /**
-   * @brief Execute command without callback and wait for response.
-   * @param rawCmd
-   * @param db
-   * @return
-   */
-  Response commandSync(QList<QByteArray> rawCmd, int db = -1);
 
   /**
    * @brief CollectionCallback
@@ -379,8 +365,6 @@ class Connection : public QObject {
   void createTransporter();
   bool isTransporterRunning();
 
-  Response internalCommandSync(QList<QByteArray> rawCmd);
-
   void processScanCommand(
       const ScanCommand &cmd, CollectionCallback callback,
       QSharedPointer<QVariantList> result = QSharedPointer<QVariantList>(),
@@ -395,7 +379,7 @@ class Connection : public QObject {
 
   void sentinelConnectToMaster();
 
-  QVariantList executeClusterSlotsCommand();
+  void rawClusterSlots(std::function<void(QVariantList, const QString&)> callback);
 
  protected slots:
   void auth();

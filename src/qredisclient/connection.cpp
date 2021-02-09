@@ -125,8 +125,12 @@ QFuture<RedisClient::Response> RedisClient::Connection::command(
 
 QFuture<RedisClient::Response> RedisClient::Connection::command(
     QList<QByteArray> rawCmd, QObject *owner,
-    RedisClient::Command::Callback callback, int db) {
+    RedisClient::Command::Callback callback, int db, bool priorityCmd) {
   Command cmd(rawCmd, owner, callback, db);
+
+  if (priorityCmd) {
+      cmd.markAsHiPriorityCommand();
+  }
 
   try {
     return this->runCommand(cmd);
@@ -178,21 +182,6 @@ void RedisClient::Connection::pipelinedCmd(
     runCommands(pendingCommands);
     runCommand(cmd);
   }
-}
-
-RedisClient::Response RedisClient::Connection::commandSync(
-    QList<QByteArray> rawCmd, int db) {
-  Command cmd(rawCmd, db);
-  return commandSync(cmd);
-}
-
-RedisClient::Response RedisClient::Connection::commandSync(
-    const Command &command) {
-  auto future = runCommand(command);
-
-  if (future.isCanceled()) return RedisClient::Response();
-
-  return future.result();
 }
 
 QFuture<RedisClient::Response> RedisClient::Connection::runCommand(
@@ -331,14 +320,21 @@ RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo() {
   return m_serverInfo.databases;
 }
 
-void RedisClient::Connection::refreshServerInfo() {
-  Response infoResult = internalCommandSync({"INFO", "ALL"});
-  if (infoResult.isPermissionError()) {
-      QString noPermError = infoResult.value().toString();
-      emit error(noPermError);
-      qDebug() << "INFO error:" << noPermError;
-  }
-  m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
+void RedisClient::Connection::refreshServerInfo(std::function<void()> callback) {
+  QString errMsg("Cannot refresh server info: %1");
+
+  cmd({"INFO", "ALL"}, this, -1, [this, errMsg, callback](const Response& infoResult){
+      if (infoResult.isPermissionError()) {
+          QString noPermError = infoResult.value().toString();
+          emit error(errMsg.arg(noPermError));
+          return;
+      }
+      m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
+
+      callback();
+  }, [this, errMsg](const QString& err) {
+      emit error(errMsg.arg(err));
+  }, true);
 }
 
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
@@ -348,8 +344,6 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
   }
 
   QSharedPointer<RawKeysList> result(new RawKeysList());
-  m_notVisitedMasterNodes =
-      QSharedPointer<HostList>(new HostList(getMasterNodes()));
 
   auto onConnect = [this, callback, pattern, result](const QString &err) {
     if (!err.isEmpty()) {
@@ -375,15 +369,20 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
     clusterConnectToNextMasterNode(onConnect);
   };
 
-  clusterConnectToNextMasterNode(onConnect);
+  getMasterNodes([this, callback, onConnect](const HostList& hosts, const QString& err) {
+     if (err.size() > 0)
+         return callback(RawKeysList(), err);
+
+     m_notVisitedMasterNodes =
+         QSharedPointer<HostList>(new HostList(hosts));
+
+     clusterConnectToNextMasterNode(onConnect);
+  });
 }
 
 void RedisClient::Connection::flushDbKeys(
     int dbIndex, std::function<void(const QString &)> callback) {
   if (mode() == Mode::Cluster) {
-    m_notVisitedMasterNodes =
-        QSharedPointer<HostList>(new HostList(getMasterNodes()));
-
     auto onConnect = [this, callback](const QString &err) {
       if (!err.isEmpty()) {
         return callback(QObject::tr("Cannot connect to cluster node %1:%2")
@@ -406,9 +405,18 @@ void RedisClient::Connection::flushDbKeys(
       if (!hasNotVisitedClusterNodes()) return callback(QString());
 
       clusterConnectToNextMasterNode(onConnect);
-    };
+    };    
 
-    clusterConnectToNextMasterNode(onConnect);
+    getMasterNodes([this, callback, onConnect](const HostList& hosts, const QString& err) {
+       if (err.size() > 0)
+           return callback(err);
+
+       m_notVisitedMasterNodes =
+           QSharedPointer<HostList>(new HostList(hosts));
+
+       clusterConnectToNextMasterNode(onConnect);
+    });
+
   } else {
     command(
         {"FLUSHDB"}, this,
@@ -525,13 +533,6 @@ bool RedisClient::Connection::isTransporterRunning() {
          m_transporterThread->isRunning();
 }
 
-RedisClient::Response RedisClient::Connection::internalCommandSync(
-    QList<QByteArray> rawCmd) {
-  Command cmd(rawCmd);
-  cmd.markAsHiPriorityCommand();
-  return commandSync(cmd);
-}
-
 void RedisClient::Connection::processScanCommand(
     const ScanCommand &cmd, CollectionCallback callback,
     QSharedPointer<QVariantList> result, bool incrementalProcessing) {
@@ -641,99 +642,113 @@ void RedisClient::Connection::callAfterConnect(
 }
 
 void RedisClient::Connection::sentinelConnectToMaster() {
-  Response mastersResult = internalCommandSync({"SENTINEL", "masters"});
+  cmd(
+      {"SENTINEL", "masters"}, this, -1,
+      [this](const Response &mastersResult) {
+        if (!mastersResult.isArray()) {
+          emit error(QString(
+              "Connection error: cannot retrive master node from sentinel"));
+          return;
+        }
 
-  if (!mastersResult.isArray()) {
-    emit error(
-        QString("Connection error: cannot retrive master node from sentinel"));
-    return;
-  }
+        QVariantList result = mastersResult.value().toList();
 
-  QVariantList result = mastersResult.value().toList();
+        if (result.size() == 0) {
+          emit error(
+              QString("Connection error: invalid response from sentinel"));
+          return;
+        }
 
-  if (result.size() == 0) {
-    emit error(QString("Connection error: invalid response from sentinel"));
-    return;
-  }
+        QStringList masterInfo = result.at(0).toStringList();
 
-  QStringList masterInfo = result.at(0).toStringList();
+        if (masterInfo.size() < 6) {
+          emit error(
+              QString("Connection error: invalid response from sentinel"));
+          return;
+        }
 
-  if (masterInfo.size() < 6) {
-    emit error(QString("Connection error: invalid response from sentinel"));
-    return;
-  }
+        QString host = masterInfo[3];
 
-  QString host = masterInfo[3];
+        if (!m_config.useSshTunnel() &&
+            (host == "127.0.0.1" || host == "localhost"))
+          host = m_config.host();
 
-  if (!m_config.useSshTunnel() && (host == "127.0.0.1" || host == "localhost"))
-    host = m_config.host();
-
-  emit reconnectTo(host, masterInfo[5].toInt());
+        emit reconnectTo(host, masterInfo[5].toInt());
+      },
+      [this](const QString &err) {
+        emit error(QString("Connection error: cannot retrive master node from "
+                           "sentinel: %1")
+                       .arg(err));
+      }, true);
 }
 
-QVariantList RedisClient::Connection::executeClusterSlotsCommand() {
+void RedisClient::Connection::rawClusterSlots(
+    std::function<void(QVariantList, const QString &)> callback) {
   if (mode() != Mode::Cluster) {
-    return QVariantList();
+    return callback(QVariantList(), QString("Invalid connection mode"));
   }
 
-  Response r;
-
-  try {
-    r = internalCommandSync({"CLUSTER", "SLOTS"});
-  } catch (const Exception &e) {
-    emit error(QString("Cannot retrive nodes list").arg(e.what()));
-    return QVariantList();
-  }
-
-  return r.value().toList();
+  cmd(
+      {"CLUSTER", "SLOTS"}, this, -1,
+      [callback](const Response &r) {
+        callback(r.value().toList(), QString());
+      },
+      [callback](const QString &err) {
+        return callback(QVariantList(),
+                        QString("Cannot retrive nodes list: %1").arg(err));
+      }, true);
 }
 
-RedisClient::Connection::HostList RedisClient::Connection::getMasterNodes() {
-  QVariantList slotsList = executeClusterSlotsCommand();
+void RedisClient::Connection::getMasterNodes(
+    std::function<void(RedisClient::Connection::HostList, const QString &)>
+        callback) {
+  rawClusterSlots([callback](QVariantList slotsList, const QString &err) {
+    if (err.size() > 0 || slotsList.size() == 0) {
+      return callback(HostList(), err);
+    }
 
-  if (slotsList.size() == 0) {
-    return HostList();
-  }
+    QSet<Host> masterNodes;
 
-  QSet<Host> masterNodes;
+    foreach (QVariant clusterSlot, slotsList) {
+      QVariantList details = clusterSlot.toList();
 
-  foreach (QVariant clusterSlot, slotsList) {
-    QVariantList details = clusterSlot.toList();
+      if (details.size() < 3) continue;
 
-    if (details.size() < 3) continue;
+      QVariantList masterDetails = details[2].toList();
 
-    QVariantList masterDetails = details[2].toList();
+      masterNodes.insert(
+          {masterDetails[0].toString(), masterDetails[1].toInt()});
+    }
 
-    masterNodes.insert({masterDetails[0].toString(), masterDetails[1].toInt()});
-  }
-
-  return masterNodes.toList();
+    callback(masterNodes.values(), err);
+  });
 }
 
-RedisClient::Connection::ClusterSlots
-RedisClient::Connection::getClusterSlots() {
-  QVariantList slotsList = executeClusterSlotsCommand();
+void RedisClient::Connection::getClusterSlots(
+    std::function<void(RedisClient::Connection::ClusterSlots, const QString &)>
+        callback) {
+  rawClusterSlots([callback](QVariantList slotsList, const QString &err) {
+    if (err.size() > 0 || slotsList.size() == 0) {
+      return callback(ClusterSlots(), err);
+    }
 
-  if (slotsList.size() == 0) {
-    return ClusterSlots();
-  }
+    ClusterSlots hashSlots;
 
-  ClusterSlots hashSlots;
+    foreach (QVariant clusterSlot, slotsList) {
+      QVariantList details = clusterSlot.toList();
 
-  foreach (QVariant clusterSlot, slotsList) {
-    QVariantList details = clusterSlot.toList();
+      if (details.size() < 3) continue;
 
-    if (details.size() < 3) continue;
+      QVariantList masterDetails = details[2].toList();
 
-    QVariantList masterDetails = details[2].toList();
+      Range r{details[0].toInt(), details[1].toInt()};
 
-    Range r{details[0].toInt(), details[1].toInt()};
+      hashSlots.insert(r,
+                       {masterDetails[0].toString(), masterDetails[1].toInt()});
+    }
 
-    hashSlots.insert(r,
-                     {masterDetails[0].toString(), masterDetails[1].toInt()});
-  }
-
-  return hashSlots;
+    callback(hashSlots, err);
+  });
 }
 
 RedisClient::Connection::Host RedisClient::Connection::getClusterHost(
@@ -774,70 +789,103 @@ QFuture<bool> RedisClient::Connection::isCommandSupported(
 }
 
 void RedisClient::Connection::auth() {
-  try {
-    if (m_config.useAuth() || m_config.useAcl()) {
-
-        Response authResult;
-
-        if (m_config.useAcl()) {
-            authResult = internalCommandSync({"AUTH", m_config.username().toUtf8(), m_config.auth().toUtf8()});
-        } else {
-            authResult = internalCommandSync({"AUTH", m_config.auth().toUtf8()});
-        }
-
-        if (authResult.isWrongPasswordError()) {
-          emit authError("Invalid credentials");
-          emit error(QString("AUTH ERROR. Invalid credentials: %1")
-                         .arg(authResult.value().toString()));
-          return;
-        } else if (!authResult.isOkMessage()) {
-          // NOTE(u_glide): Workaround for redis-sentinel < 5.0 and for
-          // redis-sentinels >= 5.0.1 without configured password
-          emit log(QString("redis-server doesn't support AUTH command or is"
-                           "misconfigured. Trying "
-                           "to proceed without password. (Error: %1)")
-                       .arg(authResult.value().toString()));
-        }
-    }
-
-    Response testResult = internalCommandSync({"PING"});
-
-    if (testResult.value().toByteArray() != QByteArray("PONG")) {
-      emit authError("Redis server requires password or password is not valid");
-      emit error(QString("AUTH ERROR. Redis server requires password or "
-                         "password is not valid: %1")
-                     .arg(testResult.value().toString()));
-      return;
-    }
-
-    bool connectionWithPopulatedServerInfo =
-        (m_serverInfo.parsed.size() > 0 &&
-         (m_currentMode == Mode::Cluster || m_currentMode == Mode::Normal));
-
-    if (connectionWithPopulatedServerInfo) {
-      emit authOk();
-      emit connected();
-      return;
-    }
-
-    refreshServerInfo();
-
-    // TODO(u_glide): add option to disable automatic mode switching
-    if (m_serverInfo.clusterMode) {
-      m_currentMode = Mode::Cluster;
-      m_clusterSlots = getClusterSlots();
-      emit log("Cluster detected");
-    } else if (m_serverInfo.sentinelMode) {
-      m_currentMode = Mode::Sentinel;
-      emit log("Sentinel detected. Requesting master node...");
-      return sentinelConnectToMaster();
-    }
-
-    emit authOk();
-    emit connected();
-  } catch (const Exception &e) {
-    emit error(QString("Connection error on AUTH: %1").arg(e.what()));
+  auto handleConnectionError = [this](const QString &err) {
+    emit error(QString("Connection error on AUTH: %1").arg(err));
     emit authError("Connection error on AUTH");
+  };
+
+  auto testConnection = [this, handleConnectionError]() {
+    cmd(
+        {"PING"}, this, -1,
+        [this](const Response &resp) {
+          if (resp.value().toByteArray() != QByteArray("PONG")) {
+            emit authError(
+                "Redis server requires password or password is not valid");
+            emit error(QString("AUTH ERROR. Redis server requires password or "
+                               "password is not valid: %1")
+                           .arg(resp.value().toString()));
+            return;
+          }
+
+          bool connectionWithPopulatedServerInfo =
+              (m_serverInfo.parsed.size() > 0 &&
+               (m_currentMode == Mode::Cluster ||
+                m_currentMode == Mode::Normal));
+
+          if (connectionWithPopulatedServerInfo) {
+            emit authOk();
+            emit connected();
+            return;
+          }
+
+          refreshServerInfo([this]() {
+            if (m_serverInfo.clusterMode) {
+              m_currentMode = Mode::Cluster;
+              getClusterSlots([this](const ClusterSlots &cs,
+                                     const QString &err) {
+                if (err.size() > 0) {
+                  emit error(
+                      QString("Cannot retrieve cluster slots: %1").arg(err));
+                  return;
+                }
+
+                m_clusterSlots = cs;
+
+                emit authOk();
+                emit connected();
+              });
+              emit log("Cluster detected");
+            } else if (m_serverInfo.sentinelMode) {
+              m_currentMode = Mode::Sentinel;
+              emit log("Sentinel detected. Requesting master node...");
+              return sentinelConnectToMaster();
+            } else {
+                emit authOk();
+                emit connected();
+            }
+          });
+        },
+        handleConnectionError, true);
+  };
+
+  if (m_config.useAuth() || m_config.useAcl()) {
+    QList<QByteArray> authCmd;
+
+    if (m_config.useAcl()) {
+      authCmd = {"AUTH", m_config.username().toUtf8(),
+                 m_config.auth().toUtf8()};
+    } else {
+      authCmd = {"AUTH", m_config.auth().toUtf8()};
+    }
+
+    auto handleAuthResp = [this, testConnection](const Response &authResult) {
+      if (authResult.isWrongPasswordError()) {
+        emit authError("Invalid credentials");
+        emit error(QString("AUTH ERROR. Invalid credentials: %1")
+                       .arg(authResult.value().toString()));
+        return;
+      } else if (!authResult.isOkMessage()) {
+        // NOTE(u_glide): Workaround for redis-sentinel < 5.0 and for
+        // redis-sentinels >= 5.0.1 without configured password
+        emit log(QString("redis-server doesn't support AUTH command or is"
+                         "misconfigured. Trying "
+                         "to proceed without password. (Error: %1)")
+                     .arg(authResult.value().toString()));        
+      }
+
+      testConnection();
+    };
+
+    command(
+        authCmd, this,
+        [handleAuthResp, handleConnectionError](RedisClient::Response r,
+                                                QString err) {
+          if (err.size() > 0) return handleConnectionError(err);
+
+          return handleAuthResp(r);
+        }, -1, true);
+  } else {
+    testConnection();
   }
 }
 

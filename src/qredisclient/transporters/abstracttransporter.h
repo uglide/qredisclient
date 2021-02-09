@@ -91,6 +91,7 @@ class AbstractTransporter : public QObject {
   Subscriptions m_subscriptions;
   bool m_reconnectEnabled;
   bool m_pendingClusterRedirect;
+  bool m_connectionInitialized;
   ResponseParser m_parser;
   uint m_followedClusterRedirects;
 };

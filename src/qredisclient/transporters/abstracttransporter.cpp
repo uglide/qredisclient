@@ -15,7 +15,8 @@ RedisClient::AbstractTransporter::AbstractTransporter(
     RedisClient::Connection *connection)
     : m_connection(connection),
       m_reconnectEnabled(true),
-      m_pendingClusterRedirect(false),      
+      m_pendingClusterRedirect(false),
+      m_connectionInitialized(false),
       m_followedClusterRedirects(0) {
   // connect signals & slots between connection & transporter
   connect(connection, SIGNAL(addCommandsToWorker(const QList<Command> &)), this,
@@ -28,8 +29,10 @@ RedisClient::AbstractTransporter::AbstractTransporter(
   connect(this, &AbstractTransporter::errorOccurred, this,
           &AbstractTransporter::cancelRunningCommands);
 
-  connect(m_connection, &Connection::authOk, this,
-          &AbstractTransporter::processCommandQueue);
+  connect(m_connection, &Connection::authOk, this, [this]() {
+      m_connectionInitialized = true;
+      QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
+  });
 }
 
 RedisClient::AbstractTransporter::~AbstractTransporter() {
@@ -53,6 +56,7 @@ void RedisClient::AbstractTransporter::disconnectFromHost() {
   m_internalCommands.clear();
   m_pendingClusterRedirect = false;
   m_followedClusterRedirects = 0;
+  m_connectionInitialized = false;
 }
 
 void RedisClient::AbstractTransporter::addCommands(
@@ -318,6 +322,11 @@ void RedisClient::AbstractTransporter::processCommandQueue() {
           return;
       }
   }  
+
+  if (!m_connectionInitialized) {
+      QTimer::singleShot(0, this, &AbstractTransporter::processCommandQueue);
+      return;
+  }
 
   if (m_connection->mode() == Connection::Mode::Cluster) {
     if (m_connection->m_clusterSlots.size() == 0 || m_runningCommands.size() > 0) {
