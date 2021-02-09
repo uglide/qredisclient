@@ -76,7 +76,7 @@ void TestTransporters::handleClusterRedirects() {
   connection->connect();
 
   connection->cmd(
-      {"type", "test"}, this, 0,
+      {"type", "test"}, this, -1,
       [this, transporter, &commandReturnedResult](const RedisClient::Response& r) {
         qDebug() << "fake response received";
         qDebug() << "commands:" << transporter->executedCommands.size();
@@ -84,7 +84,7 @@ void TestTransporters::handleClusterRedirects() {
       },
       [this](const QString& err) { qDebug() << "fake err received" << err; });
 
-  wait(1000);
+  wait(5000);
   QCOMPARE(transporter->executedCommands.size(), 30);
   QCOMPARE(commandReturnedResult, false);
   QCOMPARE(spy.count(), 1);

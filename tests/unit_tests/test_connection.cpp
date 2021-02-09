@@ -22,11 +22,10 @@ void TestConnection::connectToHostAndRunCommand() {
 
   // when
   // sync execution
-  connection.connect();
-  Response actualResult = connection.commandSync({"PING"});
+  QVERIFY(connection.connect());
+  Response actualResult = connection.command({"PING"}).result();
 
-  // then
-  QCOMPARE(connection.isConnected(), true);
+  // then  
   QCOMPARE(actualResult.value().toString(), QString("PONG"));
 }
 
@@ -35,8 +34,8 @@ void TestConnection::testScanCommand() {
   Connection connection(config);
 
   // when
-  connection.connect();
-  Response result = connection.commandSync({"SCAN", "0"});
+  QVERIFY(connection.connect());
+  Response result = connection.command({"SCAN", "0"}).result();
   QVariant value = result.value();
 
   // then
@@ -51,9 +50,9 @@ void TestConnection::testRetriveCollection() {
   QVERIFY(cmd.isValidScanCommand());
 
   // when
-  connection.connect();
-  connection.commandSync({"FLUSHDB"});
-  connection.commandSync({"SET", "test", "1"});
+  QVERIFY(connection.connect());
+  connection.command({"FLUSHDB"}).result();
+  connection.command({"SET", "test", "1"}).result();
 
   connection.retrieveCollection(
       cmd, [&callbackCalled](QVariant result, QString) {
@@ -75,7 +74,7 @@ void TestConnection::runEmptyCommand() {
   Command cmd;
 
   // when
-  connection.connect();
+  QVERIFY(connection.connect());
   bool hasException = false;
   try {
     connection.runCommand(cmd);
@@ -95,7 +94,7 @@ void TestConnection::runPipelineCommandSync() {
   cmd.addToPipeline({"SET", "pipelines", "rock"});
   cmd.addToPipeline({"HSET", "MyHash", "Key1", "1234"});
   cmd.addToPipeline({"HSET", "MyHash", "Key2", "ABCDEFGH"});
-  RedisClient::Response response = connection.commandSync(cmd);
+  RedisClient::Response response = connection.command(cmd).result();
 
   QCOMPARE(response.isArray(), true);
   QCOMPARE(response.value().toList().length(), 3);
@@ -144,17 +143,17 @@ void TestConnection::runBinaryPipelineCommand() {
     arr.append(k);
   cmd.append(arr);
 
-  RedisClient::Response response = connection.commandSync(cmd);
+  RedisClient::Response response = connection.command(cmd).result();
   QCOMPARE(response.isArray(), true);
   QCOMPARE(response.value().toList().length(), 2);
   auto validResult = QVariantList() << QString("OK") << QString("OK");
   QCOMPARE(response.value().toList(), validResult);
 
   // Read back and check content
-  response = connection.commandSync({"GET", "crlf"});
+  response = connection.command({"GET", "crlf"}).result();
   QCOMPARE(response.value().toByteArray(), QByteArray("\r\n"));
 
-  response = connection.commandSync({"GET", "binary"});
+  response = connection.command({"GET", "binary"}).result();
   QCOMPARE(response.value().toByteArray().size(), 32);
   QCOMPARE(response.value().toByteArray(), arr);
 }
@@ -163,7 +162,7 @@ void TestConnection::runBinaryPipelineCommand() {
 void TestConnection::benchmarkPipeline() {
   Connection connection(config, true);
   QVERIFY(connection.connect());
-  connection.commandSync({"flushdb"});
+  connection.command({"flushdb"}).result();
 
   RedisClient::Command cmd;
   int N = 10000;
@@ -179,7 +178,7 @@ void TestConnection::benchmarkPipeline() {
   t0.start();
   RedisClient::Response response;
   try {
-    response = connection.commandSync(cmd);
+    response = connection.command(cmd).result();
   } catch (const RedisClient::Connection::Exception& e) {
     qDebug() << "print" << e.what();
   }
@@ -191,14 +190,14 @@ void TestConnection::benchmarkPipeline() {
 
   // Read back the N'th value
   RedisClient::Response valResponse =
-      connection.commandSync({"hget", "h", QString("k%1").arg(N).toLatin1()});
+      connection.command({"hget", "h", QString("k%1").arg(N).toLatin1()}).result();
   QCOMPARE(valResponse.value(), QVariant(N));
 }
 
 void TestConnection::benchmarkPipelineAsync() {
   Connection connection(config, true);
   QVERIFY(connection.connect());
-  connection.commandSync({"flushdb"});
+  connection.command({"flushdb"}).result();
 
   RedisClient::Command cmd;
   int N = 10000;
@@ -234,7 +233,7 @@ void TestConnection::benchmarkPipelineAsync() {
 
   // Read back the N'th value
   RedisClient::Response valResponse =
-      connection.commandSync({"hget", "ha", QString("k%1").arg(N).toLatin1()});
+      connection.command({"hget", "ha", QString("k%1").arg(N).toLatin1()}).result();
   QCOMPARE(valResponse.value(), QVariant(N));
 }
 
@@ -262,10 +261,10 @@ void TestConnection::runCommandAndDelete() {
   cmd.setCallBack(owner, [](RedisClient::Response, QString) {});
 
   // when
-  connection.connect();
+  QVERIFY(connection.connect());
   connection.runCommand(cmd);
   connection.runCommand(cmd);
-  delete owner;
+  owner->deleteLater();
 
   // then
   // no errors
@@ -310,7 +309,7 @@ void TestConnection::checkTimeout() {
     wait(1000 * 10);
   }
 
-  Response actualCommandResult = connection.commandSync({"ping"});
+  Response actualCommandResult = connection.command({"ping"}).result();
 
   // then
   QCOMPARE(actualCommandResult.value().toString(), QString("PONG"));
@@ -330,7 +329,7 @@ void TestConnection::checkQueueProcessing() {
 
   // then
   QCOMPARE(connection.waitForIdle(10000), true);
-  QCOMPARE(connection.commandSync({"GET", "test_incr_key"}).value(),
+  QCOMPARE(connection.command({"GET", "test_incr_key"}).result().value(),
            QVariant(1000));
 }
 
@@ -339,12 +338,12 @@ void TestConnection::connectWithAuth() {
   Connection connection(config);
 
   // when
-  connection.connect();
-  connection.commandSync({"config", "set", "requirepass", "test"});
+  QVERIFY(connection.connect());
+  connection.command({"config", "set", "requirepass", "test"}).result();
   connection.disconnect();
 
   bool actualConnectResult = connection.connect();
-  Response actualCommandResult = connection.commandSync({"ping"});
+  Response actualCommandResult = connection.command({"ping"}).result();
 
   // then
   QCOMPARE(actualConnectResult, true);
@@ -405,7 +404,7 @@ void TestConnection::testWithDummyTransporter() {
 
   // when
   QVERIFY(connection->connect());
-  Response actualResult = connection->commandSync({"PING"});
+  Response actualResult = connection->command({"PING"}).result();
 
   // then
   QCOMPARE(connection->isConnected(), true);
