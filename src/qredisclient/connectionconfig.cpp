@@ -137,12 +137,12 @@ QString RedisClient::ConnectionConfig::sslCaCertPath() const
 
 QString RedisClient::ConnectionConfig::sslPrivateKeyPath() const
 {
-    return getValidPathFromParameter("ssl_private_key_path");
+    return param<QString>("ssl_private_key_path");
 }
 
 QString RedisClient::ConnectionConfig::sslLocalCertPath() const
 {
-    return getValidPathFromParameter("ssl_local_cert_path");
+    return param<QString>("ssl_local_cert_path");
 }
 
 bool RedisClient::ConnectionConfig::ignoreAllSslErrors() const
@@ -299,13 +299,4 @@ QJsonObject RedisClient::ConnectionConfig::toJsonObject() const
     auto params = m_parameters;
     params.remove("id");
     return QJsonObjectFromVariantHash(params);
-}
-
-QString RedisClient::ConnectionConfig::getValidPathFromParameter(const QString &name) const
-{
-    QString path = param<QString>(name);
-    if (path.isEmpty() || !QFile::exists(path))
-        return QString();
-
-    return path;
 }

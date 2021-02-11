@@ -139,8 +139,6 @@ class ConnectionConfig {
     m_parameters.insert(key, p);
   }
 
-  virtual QString getValidPathFromParameter(const QString& param) const;
-
  protected:
   QVariantHash m_parameters;
 };
