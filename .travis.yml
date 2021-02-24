@@ -1,45 +1,35 @@
 language: cpp
 sudo: required
-dist: trusty
+dist: xenial
 compiler:
   - gcc
-env:
-  - RDM_QT_VERSION=596
-  - RDM_QT_VERSION=562  
+addons:
+  apt:
+    sources:
+      - ppa:ppa:beineri/opt-qt597-xenial      
+    packages:
+      - qt59
 install:
 - sudo apt-key update
-- sudo apt-get update
-- sudo add-apt-repository --yes ppa:beineri/opt-qt${RDM_QT_VERSION}-trusty
-- sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
 - sudo apt-get update -qq
-- sudo apt-get install qt${RDM_QT_VERSION:0:2}base libssl1.0.0 -y -qq
-- sudo apt-get install gcc-4.9 g++-4.9 gdb lcov valgrind cmake -y -qq
-- if [ "$RDM_QT_VERSION" == "596" ]; then sudo apt-get install python3 python-virtualenv -y -qq; fi
-- sudo rm -f /usr/bin/gcov
-- sudo rm -f /usr/bin/gcc
-- sudo rm -f /usr/bin/g++
-- sudo ln -s /usr/bin/gcov-4.9 /usr/bin/gcov
-- sudo ln -s /usr/bin/gcc-4.9 /usr/bin/gcc
-- sudo ln -s /usr/bin/g++-4.9 /usr/bin/g++
-- source /opt/qt${RDM_QT_VERSION:0:2}/bin/qt${RDM_QT_VERSION:0:2}-env.sh
+- sudo apt-get install gdb lcov valgrind libssl1.0.0 python3 python-virtualenv -y -qq
+- source /opt/qt59/bin/qt59-env.sh
 - gem install coveralls-lcov
 - qmake -v
 - gcc --version
 - gcov --version
 script: 
-  - if [ "$RDM_QT_VERSION" == "596" ]; then pushd ./tests/unit_tests && ./run_tests && popd; fi
-  - if [ "$RDM_QT_VERSION" == "596" ]; then 
-        pushd ./tests/functional && 
-        mkdir bin &&
-        qmake "DESTDIR=./bin/" && make -s &&
-        virtualenv .venv -p python3 &&
-        source .venv/bin/activate &&
-        pip install -r requirements.txt &&
-        python tests.py &&
-        popd;
-    fi
+  - pushd ./tests/unit_tests && ./run_tests && popd
+  - pushd ./tests/functional && 
+    mkdir bin &&
+    qmake "DESTDIR=./bin/" && make -s &&
+    virtualenv .venv -p python3 &&
+    source .venv/bin/activate &&
+    pip install -r requirements.txt &&
+    python tests.py &&
+    popd    
   - qmake && make -s
 after_success:
-  - if [ "$RDM_QT_VERSION" == "596" ]; then coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered; fi
+  - coveralls-lcov --repo-token ${COVERALLS_TOKEN} coverage.info.filtered
 services:
   - redis-server
