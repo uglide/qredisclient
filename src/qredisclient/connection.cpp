@@ -911,6 +911,7 @@ RedisClient::ServerInfo RedisClient::ServerInfo::fromString(
   ParsedServerInfo parsed;
   QString currentSection{"unknown"};
   int posOfSeparator = -1;
+  int lineSectionStart = 0;
 
   foreach (QString line, lines) {
     if (line.startsWith("#")) {
@@ -918,11 +919,17 @@ RedisClient::ServerInfo RedisClient::ServerInfo::fromString(
       continue;
     }
 
-    posOfSeparator = line.indexOf(':');
+    if (line.startsWith("module:")) {
+        lineSectionStart = line.indexOf('=') + 1;
+        posOfSeparator = line.indexOf(',', lineSectionStart);
+    } else {
+        posOfSeparator = line.indexOf(':');
+        lineSectionStart = 0;
+    }
 
     if (posOfSeparator == -1) continue;
 
-    parsed[currentSection][line.mid(0, posOfSeparator)] =
+    parsed[currentSection][line.mid(lineSectionStart, posOfSeparator - lineSectionStart)] =
         line.mid(posOfSeparator + 1);
   }
 
