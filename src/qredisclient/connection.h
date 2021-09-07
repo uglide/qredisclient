@@ -138,6 +138,12 @@ class Connection : public QObject {
   virtual DatabaseList getKeyspaceInfo();
 
   /**
+   * @brief getEnabledModules from INFO command
+   * @return
+   */
+  virtual QHash<QString, QString> getEnabledModules();
+
+  /**
    * @brief update internal structure for methods getServerVersion() and
    * getKeyspaceInfo()
    */

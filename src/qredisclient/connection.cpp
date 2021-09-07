@@ -317,7 +317,16 @@ double RedisClient::Connection::getServerVersion() {
 }
 
 RedisClient::DatabaseList RedisClient::Connection::getKeyspaceInfo() {
-  return m_serverInfo.databases;
+    return m_serverInfo.databases;
+}
+
+QHash<QString, QString> RedisClient::Connection::getEnabledModules()
+{
+    if (!m_serverInfo.parsed.contains("modules")) {
+        return QHash<QString, QString>();
+    }
+
+    return m_serverInfo.parsed["modules"];
 }
 
 void RedisClient::Connection::refreshServerInfo(std::function<void()> callback) {
