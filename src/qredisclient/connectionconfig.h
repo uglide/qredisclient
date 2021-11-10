@@ -117,7 +117,7 @@ class ConnectionConfig {
   /*
    * Convert config to JSON
    */
-  QJsonObject toJsonObject() const;
+  QJsonObject toJsonObject(QSet<QString> ignoreFields = QSet<QString>()) const;
   static ConnectionConfig fromJsonObject(const QJsonObject& config);  
 
   QVariantHash getInternalParameters() const;
@@ -140,6 +140,6 @@ class ConnectionConfig {
   }
 
  protected:
-  QVariantHash m_parameters;
+  QVariantHash m_parameters;  
 };
 }  // namespace RedisClient

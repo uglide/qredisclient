@@ -36,7 +36,7 @@ QByteArray RedisClient::ConnectionConfig::id() const
         return storedId;
 
     QCryptographicHash hash(QCryptographicHash::Sha256);
-    hash.addData(QJsonDocument(toJsonObject()).toJson(QJsonDocument::Compact));
+    hash.addData(QJsonDocument(toJsonObject({"id"})).toJson(QJsonDocument::Compact));
     return hash.result();
 }
 
@@ -222,7 +222,8 @@ bool RedisClient::ConnectionConfig::useSshTunnel() const
             && sshPort() > 0
             && !param<QString>("ssh_user").isEmpty()
             && (!param<QString>("ssh_password").isEmpty()
-                || !param<QString>("ssh_private_key_path").isEmpty());
+                || !param<QString>("ssh_private_key_path").isEmpty()
+                || param<bool>("ask_ssh_password", false));
 }
 
 bool RedisClient::ConnectionConfig::useAuth() const
@@ -294,9 +295,13 @@ RedisClient::ConnectionConfig RedisClient::ConnectionConfig::fromJsonObject(cons
     return c;
 }
 
-QJsonObject RedisClient::ConnectionConfig::toJsonObject() const
+QJsonObject RedisClient::ConnectionConfig::toJsonObject(QSet<QString> ignoreFields) const
 {
-    auto params = m_parameters;
-    params.remove("id");
+    auto params = m_parameters;    
+
+    for (auto ignoredParam : ignoreFields) {
+        params.remove(ignoredParam);
+    }
+
     return QJsonObjectFromVariantHash(params);
 }
