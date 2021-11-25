@@ -115,7 +115,8 @@ void RedisClient::AbstractTransporter::sendResponse(
     const RedisClient::Response &response) {
   //logResponse(response);
 
-  if (response.isMessage()) {
+  if (response.isMessage() ||
+      m_connection->m_currentMode == Connection::Mode::Monitor) {
     QByteArray channel = response.getChannel();
 
     if (m_subscriptions.contains(channel))
@@ -181,6 +182,11 @@ void RedisClient::AbstractTransporter::sendResponse(
 
     if (runningCommand->cmd.isSubscriptionCommand())
       addSubscriptionsFromRunningCommand(runningCommand);
+
+    if (runningCommand->cmd.isMonitorCommand()) {
+        m_connection->m_currentMode = Connection::Mode::Monitor;
+        m_subscriptions.insert(QByteArray(), runningCommand->emitter);
+    }
   }
   runningCommand.clear();
 }

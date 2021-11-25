@@ -138,6 +138,12 @@ bool RedisClient::Command::isSelectCommand() const {
   return m_commandWithArguments.at(0).toLower() == "select";
 }
 
+bool RedisClient::Command::isMonitorCommand() const {
+  if (m_commandWithArguments.length() != 1) return false;
+
+  return m_commandWithArguments.at(0).toLower() == "monitor";
+}
+
 bool RedisClient::Command::isSubscriptionCommand() const {
   if (m_commandWithArguments.length() < 2) return false;
 

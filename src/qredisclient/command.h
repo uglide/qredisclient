@@ -183,6 +183,7 @@ public:
   bool isUnSubscriptionCommand() const;
   bool isAuthCommand() const;
   bool isPipelineCommand() const;
+  bool isMonitorCommand() const;
 
 protected:
     /**

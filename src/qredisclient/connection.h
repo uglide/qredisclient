@@ -55,7 +55,7 @@ class Connection : public QObject {
   friend class AbstractTransporter;
 
  public:
-  enum class Mode { Normal, PubSub, Cluster, Sentinel };
+  enum class Mode { Normal, PubSub, Cluster, Sentinel, Monitor };
   class InvalidModeException : public Connection::Exception {};
 
   class SSHSupportException : public Connection::Exception {
