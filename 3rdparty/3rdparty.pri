@@ -11,5 +11,6 @@ SOURCES += $$PWD/hiredis/read.c \
            $$PWD/crc16.c
 
 
+include($$PWD/qsshclient/qsshclient.pri)
 # Asyncfuture
 include($$PWD/asyncfuture/asyncfuture.pri)

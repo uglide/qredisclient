@@ -9,12 +9,9 @@
 #include "command.h"
 #include "scancommand.h"
 #include "transporters/defaulttransporter.h"
+#include "transporters/sshtransporter.h"
 #include "utils/compat.h"
 #include "utils/sync.h"
-
-#ifdef SSH_SUPPORT
-#include "sshtransporter.h"
-#endif
 
 inline void initResources() { Q_INIT_RESOURCE(lua); }
 
@@ -525,12 +522,8 @@ void RedisClient::Connection::getNamespaceItems(
 void RedisClient::Connection::createTransporter() {
   // todo : implement unix socket transporter
   if (m_config.useSshTunnel()) {
-#ifdef SSH_SUPPORT
     m_transporter =
         QSharedPointer<AbstractTransporter>(new SshTransporter(this));
-#else
-    throw SSHSupportException("QRedisClient compiled without ssh support.");
-#endif
   } else {
     m_transporter =
         QSharedPointer<AbstractTransporter>(new DefaultTransporter(this));

@@ -16,4 +16,3 @@ tests/functional/*.data
 tests/functional/bin/*
 tests/*key*
 *Redis-64*
-src/qredisclient/transporters/*/*
