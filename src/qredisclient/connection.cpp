@@ -261,7 +261,7 @@ QSharedPointer<RedisClient::Connection> RedisClient::Connection::clone(
   config.setId(config.id());
 
   auto newConnection = QSharedPointer<RedisClient::Connection>(
-      new RedisClient::Connection(config));
+      new RedisClient::Connection(config), &QObject::deleteLater);
 
   if (copyServerInfo) newConnection->m_serverInfo = m_serverInfo;
 
