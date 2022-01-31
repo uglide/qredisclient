@@ -17,9 +17,13 @@ class DummyConnection : public RedisClient::Connection {
         m_version(version),
         m_raiseExceptionOnConnect(raise_error) {}
 
-  QSharedPointer<RedisClient::Connection> clone(bool copyServerInfo=true) const override {
+  ~DummyConnection() override {
+      executedCommands.clear();
+  }
+
+  QSharedPointer<RedisClient::Connection> clone(bool) const override {
     if (m_clone) {
-      return m_clone;
+      return m_clone.toStrongRef();
     }
     return RedisClient::Connection::clone();
   }
@@ -75,7 +79,7 @@ class DummyConnection : public RedisClient::Connection {
     auto callback = cmd.getCallBack();
     callback(resp, QString());
 
-    runCommandCalled++;
+    runCommandCalled++;    
     executedCommands.push_back(cmd);
     return d.future();
   }
@@ -99,12 +103,18 @@ class DummyConnection : public RedisClient::Connection {
         continue;
       }
 
-      fakeResponses.push_back(p.getNextResponse());
+      auto resp = p.getNextResponse();
+
+      if (resp.type() == RedisClient::Response::Unknown) {
+          qWarning() << "Invalid reponse string:" << response;
+      }
+
+      fakeResponses.push_back(resp);
     }
   }
 
   void setClone(QSharedPointer<RedisClient::Connection> clone) {
-    m_clone = clone;
+    m_clone = clone.toWeakRef();
   }
 
   QList<RedisClient::Command> executedCommands;
@@ -113,5 +123,5 @@ class DummyConnection : public RedisClient::Connection {
  private:
   double m_version;
   bool m_raiseExceptionOnConnect;
-  QSharedPointer<RedisClient::Connection> m_clone;
+  QWeakPointer<RedisClient::Connection> m_clone;
 };

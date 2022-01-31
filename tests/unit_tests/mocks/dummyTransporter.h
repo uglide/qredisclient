@@ -60,7 +60,7 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
     RedisClient::AbstractTransporter::addCommands(commands);
   }
 
-  void init() {
+  void init() override {
     initCalls++;
 
     // Init command tested after socket connection
@@ -104,7 +104,7 @@ class DummyTransporter : public RedisClient::AbstractTransporter {
     sendResponse(resp);
   }
 
-  void sendResponse(const RedisClient::Response& response) {
+  void sendResponse(const RedisClient::Response& response) override {
     if (m_catchParsedResponses) {
       catchedResponses.append(response);
     } else {
