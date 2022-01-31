@@ -30,8 +30,6 @@ RedisClient::Command::Command(const QList<QByteArray> &cmd, QObject *context,
       m_isPipeline(false),
       m_callback(callback) {}
 
-RedisClient::Command::~Command() {}
-
 RedisClient::Command &RedisClient::Command::append(const QByteArray &part) {
   if (!m_isPipeline)
     m_commandWithArguments.append(part);

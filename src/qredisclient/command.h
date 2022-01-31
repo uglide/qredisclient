@@ -45,7 +45,7 @@ public:
   /**
    * @brief ~Command
    */
-  virtual ~Command();
+  virtual ~Command() = default;
 
   /**
    * @brief Append additional arg/part to command ("SET 1" + "2")

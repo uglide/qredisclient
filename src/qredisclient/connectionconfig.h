@@ -32,7 +32,7 @@ class ConnectionConfig {
   ConnectionConfig& operator=(const ConnectionConfig& other);
   ConnectionConfig(const QVariantHash& options);
 
-  virtual ~ConnectionConfig() {}
+  virtual ~ConnectionConfig() = default;
 
   QByteArray id() const;
   void setId(QByteArray id);
