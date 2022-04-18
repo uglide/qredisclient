@@ -195,6 +195,16 @@ uint RedisClient::ConnectionConfig::sshPort() const
     return param<uint>("ssh_port", DEFAULT_SSH_PORT);
 }
 
+bool RedisClient::ConnectionConfig::sshAgent() const
+{
+    return param<bool>("ssh_agent", false);
+}
+
+QString RedisClient::ConnectionConfig::sshAgentPath() const
+{
+    return param<QString>("ssh_agent_path", "");
+}
+
 QVariantHash RedisClient::ConnectionConfig::getInternalParameters() const
 {
     return m_parameters;
@@ -218,12 +228,15 @@ bool RedisClient::ConnectionConfig::isNull() const
 
 bool RedisClient::ConnectionConfig::useSshTunnel() const
 {
+    bool hasAuthMethod = !param<QString>("ssh_password").isEmpty()
+            || !param<QString>("ssh_private_key_path").isEmpty()
+            || param<bool>("ask_ssh_password", false)
+            || sshAgent();
+
     return !param<QString>("ssh_host").isEmpty()
             && sshPort() > 0
             && !param<QString>("ssh_user").isEmpty()
-            && (!param<QString>("ssh_password").isEmpty()
-                || !param<QString>("ssh_private_key_path").isEmpty()
-                || param<bool>("ask_ssh_password", false));
+            && hasAuthMethod;
 }
 
 bool RedisClient::ConnectionConfig::useAuth() const
@@ -286,6 +299,16 @@ void RedisClient::ConnectionConfig::setSshUser(QString user)
 void RedisClient::ConnectionConfig::setSshPort(uint port)
 {
     m_parameters.insert("ssh_port", port);
+}
+
+void RedisClient::ConnectionConfig::setSshAgent(bool v)
+{
+    m_parameters.insert("ssh_agent", v);
+}
+
+void RedisClient::ConnectionConfig::setSshAgentPath(const QString &v)
+{
+    m_parameters.insert("ssh_agent_path", v);
 }
 
 RedisClient::ConnectionConfig RedisClient::ConnectionConfig::fromJsonObject(const QJsonObject &config)

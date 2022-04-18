@@ -89,6 +89,8 @@ class ConnectionConfig {
   virtual QString sshUser() const;
   virtual QString sshHost() const;
   virtual uint sshPort() const;
+  virtual bool sshAgent() const;
+  virtual QString sshAgentPath() const;
 
   /**
    * @brief getSshPrivateKeyPath from specified path
@@ -107,6 +109,8 @@ class ConnectionConfig {
   virtual void setSshPrivateKeyPath(QString path);
   virtual void setSshUser(QString user);
   virtual void setSshPort(uint port);
+  virtual void setSshAgent(bool v);
+  virtual void setSshAgentPath(const QString& v);
 
   /*
    * Cluster settings
