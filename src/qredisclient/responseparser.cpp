@@ -76,7 +76,9 @@ const redisReplyObjectFunctions RedisClient::ResponseParser::defaultFunctions =
     {RedisClient::ResponseParser::createStringObject,
      RedisClient::ResponseParser::createArrayObject,
      RedisClient::ResponseParser::createIntegerObject,
+     RedisClient::ResponseParser::createDoubleObject,
      RedisClient::ResponseParser::createNilObject,
+     RedisClient::ResponseParser::createBoolObject,
      RedisClient::ResponseParser::freeObject};
 
 redisReader* RedisClient::ResponseParser::redisReaderCreate() {
@@ -104,7 +106,7 @@ void* RedisClient::ResponseParser::createStringObject(const redisReadTask* task,
 }
 
 void* RedisClient::ResponseParser::createArrayObject(const redisReadTask* task,
-                                                     int elements) {
+                                                     size_t elements) {
   ParsingResult* arr = new ParsingResult(elements);
 
   if (task->parent) setParent(task, arr);
@@ -121,12 +123,30 @@ void* RedisClient::ResponseParser::createIntegerObject(
   return val;
 }
 
+void *RedisClient::ResponseParser::createDoubleObject(const redisReadTask *task, double value, char *, size_t)
+{
+    ParsingResult* val = new ParsingResult(task->type, QVariant(value));
+
+    if (task->parent) setParent(task, val);
+
+    return val;
+}
+
 void* RedisClient::ResponseParser::createNilObject(const redisReadTask* task) {
   ParsingResult* nil = new ParsingResult(task->type, QVariant());
 
   if (task->parent) setParent(task, nil);
 
   return nil;
+}
+
+void *RedisClient::ResponseParser::createBoolObject(const redisReadTask *task, int value)
+{
+    ParsingResult* val = new ParsingResult(task->type, QVariant(static_cast<bool>(value)));
+
+    if (task->parent) setParent(task, val);
+
+    return val;
 }
 
 void RedisClient::ResponseParser::freeObject(void* obj) {
