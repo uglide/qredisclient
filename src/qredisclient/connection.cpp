@@ -347,14 +347,14 @@ void RedisClient::Connection::refreshServerInfo(std::function<void()> callback) 
 }
 
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
-                                             const QString &pattern) {
+                                             const QString &pattern, long scanLimit) {
   if (mode() != Mode::Cluster) {
     throw Exception("Connection is not in cluster mode");
   }
 
   QSharedPointer<RawKeysList> result(new RawKeysList());
 
-  auto onConnect = [this, callback, pattern, result](const QString &err) {
+  auto onConnect = [this, callback, pattern, result, scanLimit](const QString &err) {
     if (!err.isEmpty()) {
       return callback(*result,
                       QObject::tr("Cannot connect to cluster node %1:%2")
@@ -362,7 +362,7 @@ void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
                           .arg(m_config.port()));
     }
 
-    getDatabaseKeys(m_collectClusterNodeKeys, pattern);
+    getDatabaseKeys(m_collectClusterNodeKeys, pattern, -1, scanLimit);
   };
 
   m_collectClusterNodeKeys = [this, result, callback, onConnect](

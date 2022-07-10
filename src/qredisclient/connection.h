@@ -22,6 +22,8 @@ class AbstractTransporter;
 
 typedef QMap<int, int> DatabaseList;
 
+#define DEFAULT_SCAN_LIMIT 10000
+
 /**
  * @brief The ServerInfo struct
  * Represents redis-server information parsed from INFO command.
@@ -167,7 +169,7 @@ class Connection : public QObject {
    */
   virtual void getDatabaseKeys(RawKeysListCallback callback,
                                const QString &pattern = QString("*"),
-                               int dbIndex = 0, long scanLimit = 10000);
+                               int dbIndex = 0, long scanLimit = DEFAULT_SCAN_LIMIT);
 
   typedef QList<QPair<QByteArray, ulong>> RootNamespaces;
   typedef QList<QByteArray> RootKeys;
@@ -186,7 +188,7 @@ class Connection : public QObject {
    * @param pattern
    */
   virtual void getClusterKeys(RawKeysListCallback callback,
-                              const QString &pattern);
+                              const QString &pattern, long scanLimit = DEFAULT_SCAN_LIMIT);
 
   /**
    * @brief flushDbKeys - Remove keys on all master nodes
