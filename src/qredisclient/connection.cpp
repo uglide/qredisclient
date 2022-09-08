@@ -139,21 +139,14 @@ QFuture<RedisClient::Response> RedisClient::Connection::command(
   }
 }
 
-void RedisClient::Connection::pipelinedCmd(
-    QList<QList<QByteArray>> rawCmds, QObject *owner, int db,
-    std::function<void(const RedisClient::Response &, QString)> callback) {
+void RedisClient::Connection::pipelinedCmd(const QList<QList<QByteArray>> &rawCmds, QObject *owner, int db,
+    std::function<void(const RedisClient::Response &, QString)> callback,
+    bool transaction) {
   QMutexLocker l(&m_blockingOp);
-
-  int limit = 100;
-
-  if (m_transporter) {
-    limit = m_transporter->pipelineCommandsLimit();
-  }
-
   QList<Command> pendingCommands;
 
   if (mode() == Mode::Cluster) {
-    for (QList<QByteArray> rawCmd : rawCmds) {
+    for (const QList<QByteArray> &rawCmd : rawCmds) {
       if (m_stoppingTransporter) return;
 
       Command cmd(rawCmd);
@@ -164,9 +157,11 @@ void RedisClient::Connection::pipelinedCmd(
   } else {
     RedisClient::Command cmd({}, db);
     cmd.setCallBack(owner, callback);
-    cmd.setPipelineCommand(true);
+    cmd.setPipelineCommand(true, transaction);
 
-    for (QList<QByteArray> rawCmd : rawCmds) {
+    int limit = pipelineCommandsLimit();
+
+    for (const QList<QByteArray> &rawCmd : rawCmds) {
       if (m_stoppingTransporter) return;
 
       if (cmd.length() >= limit) {
@@ -174,7 +169,7 @@ void RedisClient::Connection::pipelinedCmd(
 
           cmd = RedisClient::Command({}, db);
           cmd.setCallBack(owner, callback);
-          cmd.setPipelineCommand(true);
+          cmd.setPipelineCommand(true, transaction);
       }
 
       cmd.addToPipeline(rawCmd);
@@ -182,6 +177,19 @@ void RedisClient::Connection::pipelinedCmd(
     runCommands(pendingCommands);
     runCommand(cmd);
   }
+}
+
+int RedisClient::Connection::pipelineCommandsLimit() const
+{
+    if (m_transporter) {
+      return m_transporter->pipelineCommandsLimit();
+    }
+
+    if (mode() == Mode::Cluster) {
+        return 1;
+    }
+
+    return 100;
 }
 
 QFuture<RedisClient::Response> RedisClient::Connection::runCommand(

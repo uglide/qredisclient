@@ -135,9 +135,18 @@ void RedisClient::AbstractTransporter::sendResponse(
     return;
   }
 
-  if (m_runningCommands.first()->cmd.isPipelineCommand() &&
-      (response.isOkMessage() || response.isQueuedMessage())) {
-    return;
+  if (m_runningCommands.first()->cmd.isPipelineCommand()) {
+    auto pipelineCmd = m_runningCommands.first();
+
+    if (pipelineCmd->cmd.isTransaction() &&
+        (response.isOkMessage() || response.isQueuedMessage())) {
+      return;
+    }
+
+    if (!pipelineCmd->cmd.isTransaction() && pipelineCmd->cmd.length() > 1) {
+      pipelineCmd->cmd.removeFirstPipelineCmdFromQueue();
+      return;
+    }
   }
 
   auto runningCommand = m_runningCommands.dequeue();

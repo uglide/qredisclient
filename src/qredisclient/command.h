@@ -165,7 +165,9 @@ public:
    * @brief Enable/disable pipeline mode. Default is off.
    * @param enable
    */
-  void setPipelineCommand(const bool enable);
+  void setPipelineCommand(const bool enable, const bool transaction=true);
+
+  void removeFirstPipelineCmdFromQueue();
 
   /**
    * @brief isValid
@@ -183,6 +185,7 @@ public:
   bool isUnSubscriptionCommand() const;
   bool isAuthCommand() const;
   bool isPipelineCommand() const;
+  bool isTransaction() const;
   bool isMonitorCommand() const;
 
 protected:
@@ -209,6 +212,7 @@ protected:
     int m_dbIndex;
     bool m_hiPriorityCommand;
     bool m_isPipeline;
+    bool m_transaction;
     Callback m_callback;
     AsyncFuture::Deferred<Response> m_deferred;
 };

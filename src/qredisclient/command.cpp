@@ -12,14 +12,16 @@ RedisClient::Command::Command()
       m_commandWithArguments(),
       m_dbIndex(-1),
       m_hiPriorityCommand(false),
-      m_isPipeline(false) {}
+      m_isPipeline(false),
+      m_transaction(true) {}
 
 RedisClient::Command::Command(const QList<QByteArray> &cmd, int db)
     : m_owner(nullptr),
       m_commandWithArguments(cmd),
       m_dbIndex(db),
       m_hiPriorityCommand(false),
-      m_isPipeline(false) {}
+      m_isPipeline(false),
+      m_transaction(true) {}
 
 RedisClient::Command::Command(const QList<QByteArray> &cmd, QObject *context,
                               Callback callback, int db)
@@ -27,7 +29,8 @@ RedisClient::Command::Command(const QList<QByteArray> &cmd, QObject *context,
       m_commandWithArguments(cmd),
       m_dbIndex(db),
       m_hiPriorityCommand(false),
-      m_isPipeline(false),
+      m_isPipeline(false),      
+      m_transaction(true),
       m_callback(callback) {}
 
 RedisClient::Command &RedisClient::Command::append(const QByteArray &part) {
@@ -168,8 +171,22 @@ bool RedisClient::Command::isHiPriorityCommand() const {
 
 bool RedisClient::Command::isPipelineCommand() const { return m_isPipeline; }
 
-void RedisClient::Command::setPipelineCommand(const bool enable) {
+bool RedisClient::Command::isTransaction() const { return m_transaction; }
+
+void RedisClient::Command::setPipelineCommand(const bool enable, const bool transaction) {
   m_isPipeline = enable;
+  m_transaction = transaction;
+}
+
+void RedisClient::Command::removeFirstPipelineCmdFromQueue()
+{
+    if (!m_isPipeline)
+        return;
+
+    if (m_pipelineCommands.isEmpty())
+        return;
+
+    m_pipelineCommands.removeFirst();
 }
 
 int RedisClient::Command::getDbIndex() const {
@@ -408,11 +425,19 @@ QByteArray RedisClient::Command::getByteRepresentation() const {
   if (!m_isPipeline)
     return serializeToRESP(m_commandWithArguments);
   else {
-    QByteArray result = serializeToRESP({"MULTI"});
+    QByteArray result;
+
+    if (m_transaction) {
+        result.append(serializeToRESP({"MULTI"}));
+    }
+
     QList<QByteArray> pipelineCmd;
     foreach (pipelineCmd, m_pipelineCommands)
       result.append(serializeToRESP(pipelineCmd));
-    result.append(serializeToRESP({"EXEC"}));
+
+    if (m_transaction) {
+        result.append(serializeToRESP({"EXEC"}));
+    }
     return result;
   }
 }

@@ -291,9 +291,11 @@ class Connection : public QObject {
    * @param db
    * @param callback
    */
-  void pipelinedCmd(
-      QList<QList<QByteArray>> rawCmds, QObject *owner, int db,
-      std::function<void(const RedisClient::Response &, QString err)> callback);
+  void pipelinedCmd(const QList<QList<QByteArray> > &rawCmds, QObject *owner, int db,
+      std::function<void(const RedisClient::Response &, QString err)> callback, bool transaction);
+
+
+  int pipelineCommandsLimit() const;
 
   /**
    * @brief CollectionCallback
