@@ -340,7 +340,7 @@ QHash<QString, QString> RedisClient::Connection::getEnabledModules()
 void RedisClient::Connection::refreshServerInfo(std::function<void()> callback) {
   QString errMsg("Cannot refresh server info: %1");
 
-  cmd({"INFO", "ALL"}, this, -1, [this, errMsg, callback](const Response& infoResult){
+  cmd({"INFO"}, this, -1, [this, errMsg, callback](const Response& infoResult){
       if (infoResult.isPermissionError()) {
           QString noPermError = infoResult.value().toString();
           emit error(errMsg.arg(noPermError));
