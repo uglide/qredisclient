@@ -31,6 +31,8 @@ typedef QMap<int, int> DatabaseList;
 struct ServerInfo {
   ServerInfo();
 
+  ServerInfo(double version, bool clusterMode);
+
   double version;
   bool clusterMode;
   bool sentinelMode;
@@ -267,13 +269,14 @@ class Connection : public QObject {
       QList<QByteArray> rawCmd, QObject *owner, int db,
       std::function<void(const RedisClient::Response &)> callback,
       std::function<void(const QString &)> errback,
-      bool hiPriorityCmd=false) {
+      bool hiPriorityCmd=false,
+      bool ignoreErrorResponses=false) {
     try {
       return this->command(
           rawCmd, owner,
-          [callback, errback](RedisClient::Response r, QString err) {
+          [callback, errback, ignoreErrorResponses](RedisClient::Response r, QString err) {
             if (err.size() > 0) return errback(err);
-            if (r.isErrorMessage()) return errback(r.value().toString());
+            if (!ignoreErrorResponses && r.isErrorMessage()) return errback(r.value().toString());
 
             return callback(r);
           },

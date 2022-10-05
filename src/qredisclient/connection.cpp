@@ -340,18 +340,30 @@ QHash<QString, QString> RedisClient::Connection::getEnabledModules()
 void RedisClient::Connection::refreshServerInfo(std::function<void()> callback) {
   QString errMsg("Cannot refresh server info: %1");
 
-  cmd({"INFO"}, this, -1, [this, errMsg, callback](const Response& infoResult){
-      if (infoResult.isPermissionError()) {
-          QString noPermError = infoResult.value().toString();
-          emit error(errMsg.arg(noPermError));
-          return;
-      }
-      m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
+  cmd(
+      {"INFO"}, this, -1,
+      [this, errMsg, callback](const Response &infoResult) {
+        if (infoResult.isPermissionError()) {
+          cmd(
+              {"CLUSTER INFO"}, this, -1,
+              [this, callback](const Response &infoResult) {
+                bool isCluster = !infoResult.isErrorMessage();
 
-      callback();
-  }, [this, errMsg](const QString& err) {
-      emit error(errMsg.arg(err));
-  }, true);
+                m_serverInfo = ServerInfo(6.0, isCluster);
+                callback();
+              },
+              [this, errMsg](const QString &err) {
+                emit error(errMsg.arg(err));
+              },
+              true, true);
+
+        } else {
+            m_serverInfo = ServerInfo::fromString(infoResult.value().toString());
+            callback();
+        }
+      },
+      [this, errMsg](const QString &err) { emit error(errMsg.arg(err)); },
+      true, true);
 }
 
 void RedisClient::Connection::getClusterKeys(RawKeysListCallback callback,
@@ -920,6 +932,12 @@ RedisClient::Connection::getTransporter() const {
 
 RedisClient::ServerInfo::ServerInfo()
     : version(0.0), clusterMode(false), sentinelMode(false) {}
+
+RedisClient::ServerInfo::ServerInfo(double version, bool clusterMode)
+    : version(version), clusterMode(clusterMode), sentinelMode(false)
+{
+    parsed.insert("", {{"", ""}});
+}
 
 RedisClient::ServerInfo RedisClient::ServerInfo::fromString(
     const QString &info) {
